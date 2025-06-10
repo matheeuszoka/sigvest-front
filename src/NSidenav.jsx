@@ -16,6 +16,12 @@ import {useNavigate} from "react-router-dom";
 import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import GroupIcon from '@mui/icons-material/Group';
+import StoreIcon from '@mui/icons-material/Store';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import BusinessIcon from '@mui/icons-material/Business';
+import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 
 
 import logo from "./logo.png";
@@ -187,10 +193,10 @@ export default function MiniDrawer() {
                             }}
                         >
                             <ListItemIcon>
-                                <HomeIcon sx={{color: '#142442'}}/>
+                                <GroupIcon sx={{color: '#142442'}}/>
                             </ListItemIcon>
                             <ListItemText
-                                primary="Início"
+                                primary="Funcionarios"
                                 sx={{
                                     '& .MuiListItemText-primary': {
                                         color: '#142442'
@@ -199,8 +205,123 @@ export default function MiniDrawer() {
                             />
                         </ListItemButton>
                     </ListItem>
-                </List>
+                    <ListItem key="home" disablePadding>
+                        <ListItemButton
+                            onClick={() => navigate("/")}
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <AttachMoneyIcon sx={{color: '#142442'}}/>
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Financeiro"
+                                sx={{
+                                    '& .MuiListItemText-primary': {
+                                        color: '#142442'
+                                    }
+                                }}
+                            />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem key="home" disablePadding>
+                        <ListItemButton
+                            onClick={() => navigate("/")}
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <BusinessIcon sx={{color: '#142442'}}/>
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Fornecedor"
+                                sx={{
+                                    '& .MuiListItemText-primary': {
+                                        color: '#142442'
+                                    }
+                                }}
+                            />
+                        </ListItemButton>
+                    </ListItem>
 
+                    <ListItem key="home" disablePadding>
+                        <ListItemButton
+                            onClick={() => navigate("/")}
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <StoreIcon sx={{color: '#142442'}}/>
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Compras"
+                                sx={{
+                                    '& .MuiListItemText-primary': {
+                                        color: '#142442'
+                                    }
+                                }}
+                            />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem key="home" disablePadding>
+                        <ListItemButton
+                            onClick={() => navigate("/")}
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <InventoryIcon sx={{color: '#142442'}}/>
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Estoque"
+                                sx={{
+                                    '& .MuiListItemText-primary': {
+                                        color: '#142442'
+                                    }
+                                }}
+                            />
+                        </ListItemButton>
+                    </ListItem>
+
+                </List>
+                <Divider/>
+                <List>
+                    <ListItem key="home" disablePadding>
+                        <ListItemButton
+                            onClick={() => navigate("/")}
+                            sx={{
+                                '&:hover': {
+                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <ContentPasteIcon sx={{color: '#142442'}}/>
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Relatórios"
+                                sx={{
+                                    '& .MuiListItemText-primary': {
+                                        color: '#142442'
+                                    }
+                                }}
+                            />
+                        </ListItemButton>
+                    </ListItem>
+
+                </List>
             </Drawer>
             <Box component="main" sx={{flexGrow: 1, p: 3}}>
                 <DrawerHeader/>
