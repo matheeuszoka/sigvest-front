@@ -323,8 +323,7 @@ export default function MiniDrawer() {
 
                 </List>
             </Drawer>
-            <Box component="main" sx={{flexGrow: 1, p: 3}}>
-                <DrawerHeader/>
+            <Box component="main" sx={{flexGrow: 1, p: 3, marginLeft: "-40px"}}>
             </Box>
         </Box>
     );
