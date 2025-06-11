@@ -149,7 +149,7 @@ export default function MiniDrawer() {
                                 <PersonIcon sx={{color: '#142442'}}/>
                             </ListItemIcon>
                             <ListItemText
-                                primary="Cliente"
+                                primary="Clientes"
                                 sx={{
                                     '& .MuiListItemText-primary': {
                                         color: '#142442'
@@ -185,7 +185,7 @@ export default function MiniDrawer() {
                 <List>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => navigate("/funcionarios")}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',

@@ -20,10 +20,10 @@ import Typography from "@mui/material/Typography";
 import AddBoxIcon from '@mui/icons-material/AddBox';
 import {useNavigate} from "react-router-dom";
 import Sidenav from "../NSidenav";
-import PersonIcon from "@mui/icons-material/Person";
+import GroupIcon from '@mui/icons-material/Group';
 
 
-const PessoaList = () => {
+const FuncionarioList = () => {
     const [pessoas, setPessoas] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -36,12 +36,12 @@ const PessoaList = () => {
 
     const fetchPessoas = async () => {
         try {
-            const response = await axios.get("http://localhost:8080/pessoa");
+            const response = await axios.get("http://localhost:8080/pessoa/atrib/funcionario");
             setPessoas(response.data);
         } catch (error) {
-            console.error('Erro ao carregar pessoas:', error);
+            console.error('Erro ao carregar funcionarios:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage('Erro ao carregar a lista de pessoas');
+            setSnackbarMessage('Erro ao carregar a lista de funcionarios');
             setOpenSnackbar(true);
         }
     };
@@ -52,22 +52,22 @@ const PessoaList = () => {
 
     const handleEditar = (pessoa) => {
         // Redireciona para a página de edição passando o ID como parâmetro
-        navigate(`/pessoa/editar/${pessoa.idPessoa}`);
+        navigate(`/funcionarios/editar/${pessoa.idPessoa}`);
 
     };
 
     const handleExcluir = async (idPessoa) => {
-        if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
+        if (window.confirm('Tem certeza que deseja excluir este funcionario?')) {
             try {
                 await axios.delete(`http://localhost:8080/pessoa/${idPessoa}`);
                 await fetchPessoas();
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Cliente excluído com sucesso');
+                setSnackbarMessage('Funcionario excluído com sucesso');
                 setOpenSnackbar(true);
             } catch (error) {
-                console.error('Erro ao excluir cliente:', error);
+                console.error('Erro ao excluir pessoa:', error);
                 setSnackbarSeverity('error');
-                setSnackbarMessage('Erro ao excluir cliente');
+                setSnackbarMessage('Erro ao excluir funcionario');
                 setOpenSnackbar(true);
             }
         }
@@ -92,12 +92,12 @@ const PessoaList = () => {
                 <Sidenav/>
                 <Box component="main" sx={{flexGrow: 1, p: 3}}>
                     <Box sx={{display: 'flex', alignItems: 'center', gap: 2, mb: 3}}>
-                        <PersonIcon sx={{color: '#142442', fontSize: '2rem'}}/>
-                        <h1>Lista de Clientes</h1>
+                        <GroupIcon sx={{color: '#142442', fontSize: '2rem'}}/>
+                        <h1>Lista de Funcionários</h1>
                     </Box>
                     <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                         <IconButton
-                            onClick={() => navigate("/pessoa/novo")}
+                            onClick={() => navigate("/funcionarios/novo")}
                             color="primary"
                             sx={{
                                 padding: '8px',
@@ -124,9 +124,9 @@ const PessoaList = () => {
                                         <TableCell>Nome</TableCell>
                                         <TableCell>Telefone</TableCell>
                                         <TableCell>CPF/CNPJ</TableCell>
+                                        <TableCell>RG</TableCell>
                                         <TableCell>Endereço</TableCell>
                                         <TableCell>Nº</TableCell>
-                                        <TableCell>Cidade</TableCell>
                                         <TableCell>Ações</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -139,9 +139,9 @@ const PessoaList = () => {
                                                 <TableCell>{pessoa.nomeCompleto}</TableCell>
                                                 <TableCell>{pessoa.telefone}</TableCell>
                                                 <TableCell>{pessoa.cpfcnpj}</TableCell>
+                                                <TableCell>{pessoa.rg}</TableCell>
                                                 <TableCell>{pessoa.endereco?.logradouro || '-'}</TableCell>
                                                 <TableCell>{pessoa.endereco?.numero || '-'}</TableCell>
-                                                <TableCell>{pessoa.endereco?.cidade?.nomeCidade || '-'}</TableCell>
                                                 <TableCell>
                                                     <IconButton
                                                         onClick={() => handleEditar(pessoa)}
@@ -203,4 +203,4 @@ const PessoaList = () => {
     );
 };
 
-export default PessoaList;
+export default FuncionarioList;

@@ -10,7 +10,7 @@ import { cpf, cnpj } from 'cpf-cnpj-validator';
 
 const steps = ['Informações Pessoais', 'Endereço', 'Confirmação'];
 
-const PessoaForm = ({onUserAdded}) => {
+const FuncionarioForm = ({onUserAdded}) => {
     const navigate = useNavigate();
     const { id } = useParams(); // Para pegar o ID da URL
     const location = useLocation(); // Para pegar dados passados via state
@@ -25,7 +25,7 @@ const PessoaForm = ({onUserAdded}) => {
     const [telefone, setTelefone] = useState('');
     const [email, setEmail] = useState('');
     const [tipo, setTipo] = useState('');
-    const [atrib, setAtrib] = useState('CLIENTE');
+    const [atrib, setAtrib] = useState('FUNCIONARIO');
     const [endereco, setEndereco] = useState({
         logradouro: '',
         numero: '',
@@ -65,9 +65,9 @@ const PessoaForm = ({onUserAdded}) => {
             const response = await axios.get(`http://localhost:8080/pessoa/${idPessoa}`);
             preencherFormulario(response.data);
         } catch (error) {
-            console.error('Erro ao buscar pessoa:', error);
+            console.error('Erro ao buscar funcionario:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage('Erro ao carregar dados da pessoa');
+            setSnackbarMessage('Erro ao carregar dados do funcionario');
             setOpenSnackbar(true);
         } finally {
             setLoading(false);
@@ -99,7 +99,7 @@ const PessoaForm = ({onUserAdded}) => {
         setTelefone(formatTelefone(pessoa.telefone || ''));
         setEmail(pessoa.email || '');
         setTipo(pessoa.tipo || '');
-        setAtrib(pessoa.atrib || 'CLIENTE');
+        setAtrib(pessoa.atrib || 'FUNCIONARIO');
 
         if (pessoa.endereco) {
             setEndereco({
@@ -126,10 +126,9 @@ const PessoaForm = ({onUserAdded}) => {
         }
     };
 
-    // Função para voltar para a etapa anterior ou navegar para página pessoa
     const prevStep = () => {
         if (step === 0) {
-            navigate('/pessoa');
+            navigate('/funcionarios');
         } else {
             setStep(step - 1);
         }
@@ -398,12 +397,12 @@ const PessoaForm = ({onUserAdded}) => {
             if (isEditing) {
                 await axios.put(`http://localhost:8080/pessoa/${id}`, pessoaData);
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Pessoa atualizada com sucesso');
+                setSnackbarMessage('Funcionario atualizado com sucesso');
             } else {
                 // Criar nova pessoa
                 await axios.post("http://localhost:8080/pessoa", pessoaData);
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Pessoa cadastrada com sucesso');
+                setSnackbarMessage('Funcionario cadastrado com sucesso');
             }
 
             setOpenSnackbar(true);
@@ -413,13 +412,13 @@ const PessoaForm = ({onUserAdded}) => {
             }
 
             setTimeout(() => {
-                navigate('/pessoa');
-            }, 2000);
+                navigate('/funcionarios');
+            }, 1000);
 
         } catch (error) {
-            console.error("Erro ao salvar pessoa:", error);
+            console.error("Erro ao salvar funcionario:", error);
             setSnackbarSeverity('error');
-            setSnackbarMessage(isEditing ? 'Erro ao atualizar pessoa' : 'Erro ao cadastrar pessoa');
+            setSnackbarMessage(isEditing ? 'Erro ao atualizar funcionario' : 'Erro ao cadastrar funcionario');
             setOpenSnackbar(true);
         } finally {
             setLoading(false);
@@ -689,7 +688,7 @@ const PessoaForm = ({onUserAdded}) => {
                 <Sidenav/>
                 <Box component="main" sx={{flexGrow: 1, p: 3}}>
                     <Typography variant="h4">
-                        {isEditing ? 'Editar Cliente' : 'Cadastrar Cliente'}
+                        {isEditing ? 'Editar Funcionario' : 'Cadastrar Funcionario'}
                     </Typography>
 
                     <Paper sx={{padding: 3, marginTop: 3}}>
@@ -749,4 +748,4 @@ const PessoaForm = ({onUserAdded}) => {
     );
 };
 
-export default PessoaForm;
+export default FuncionarioForm;
