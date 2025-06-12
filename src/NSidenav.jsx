@@ -159,7 +159,7 @@ export default function MiniDrawer() {
                         </ListItemButton>
                     </ListItem> <ListItem key="home" disablePadding>
                     <ListItemButton
-                        onClick={() => navigate("/")}
+                        onClick={() => alert("Em Breve!")}
                         sx={{
                             '&:hover': {
                                 backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -207,7 +207,7 @@ export default function MiniDrawer() {
                     </ListItem>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => alert("Em Breve!")}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -229,7 +229,8 @@ export default function MiniDrawer() {
                     </ListItem>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => alert("Em Breve!")}
+
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -252,7 +253,7 @@ export default function MiniDrawer() {
 
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => alert("Em Breve!")}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -274,7 +275,7 @@ export default function MiniDrawer() {
                     </ListItem>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => navigate("/estoque")}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -300,7 +301,7 @@ export default function MiniDrawer() {
                 <List>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/")}
+                            onClick={() => alert("Em Breve!")}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',

@@ -36,7 +36,7 @@ const PessoaList = () => {
 
     const fetchPessoas = async () => {
         try {
-            const response = await axios.get("http://localhost:8080/pessoa");
+            const response = await axios.get("http://localhost:8080/pessoa/atrib/cliente");
             setPessoas(response.data);
         } catch (error) {
             console.error('Erro ao carregar pessoas:', error);

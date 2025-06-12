@@ -17,14 +17,18 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from "axios";
 import Typography from "@mui/material/Typography";
+import AddBoxIcon from '@mui/icons-material/AddBox';
 import {useNavigate} from "react-router-dom";
 import Sidenav from "../NSidenav";
+import PersonIcon from "@mui/icons-material/Person";
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import BrandingWatermarkIcon from '@mui/icons-material/BrandingWatermark';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import InventoryIcon from '@mui/icons-material/Inventory';
 
 
-const MarcaList = () => {
-    const [marcas, setMarcas] = useState([]);
+
+const EstoqueList = () => {
+    const [produtos, setProdutos] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -34,39 +38,40 @@ const MarcaList = () => {
 
     const navigate = useNavigate();
 
-    const fetchMarcas = async () => {
+    const fetchProdutos = async () => {
         try {
-            const response = await axios.get("http://localhost:8080/marca");
-            setMarcas(response.data);
+            const response = await axios.get("http://localhost:8080/produto");
+            setProdutos(response.data);
         } catch (error) {
-            console.error('Erro ao carregar marcas:', error);
+            console.error('Erro ao carregar produtos:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage('Erro ao carregar a lista de marcas');
+            setSnackbarMessage('Erro ao carregar a lista de produtos');
             setOpenSnackbar(true);
         }
     };
 
     useEffect(() => {
-        fetchMarcas();
+        fetchProdutos();
     }, []);
 
-    const handleEditar = (marca) => {
-        navigate(`/marca/editar/${marca.idMarca}`);
+    const handleEditar = (produto) => {
+        // Redireciona para a página de edição passando o ID como parâmetro
+        navigate(`/produto/editar/${produto.idProduto}`);
 
     };
 
-    const handleExcluir = async (idMarca) => {
-        if (window.confirm('Tem certeza que deseja excluir este marca?')) {
+    const handleExcluir = async (idProduto) => {
+        if (window.confirm('Tem certeza que deseja excluir este produto?')) {
             try {
-                await axios.delete(`http://localhost:8080/marca/${idMarca}`);
-                await fetchMarcas();
+                await axios.delete(`http://localhost:8080/pessoa/${idProduto}`);
+                await fetchProdutos();
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Marca excluído com sucesso');
+                setSnackbarMessage('Produto excluído com sucesso');
                 setOpenSnackbar(true);
             } catch (error) {
-                console.error('Erro ao excluir marca:', error);
+                console.error('Erro ao excluir produto:', error);
                 setSnackbarSeverity('error');
-                setSnackbarMessage('Erro ao excluir marca');
+                setSnackbarMessage('Erro ao excluir produto');
                 setOpenSnackbar(true);
             }
         }
@@ -91,12 +96,12 @@ const MarcaList = () => {
                 <Sidenav/>
                 <Box component="main" sx={{flexGrow: 1, p: 3}}>
                     <Box sx={{display: 'flex', alignItems: 'center', gap: 2, mb: 3}}>
-                        <BrandingWatermarkIcon sx={{color: '#142442', fontSize: '2rem'}}/>
-                        <h1>Marca</h1>
+                        <InventoryIcon sx={{color: '#142442', fontSize: '2rem'}}/>
+                        <h1>Estoque</h1>
                     </Box>
                     <Box sx={{display: 'flex', alignItems: 'center', mb: 2, gap: 2}}>
                         <IconButton
-                            onClick={() => navigate("/estoque")}
+                            onClick={() => navigate("/produto/novo")}
                             color="primary"
                             sx={{
                                 display: 'flex',
@@ -112,11 +117,11 @@ const MarcaList = () => {
                                 }
                             }}
                         >
-                            <ArrowBackIcon/>
-                            <Typography variant="button">Voltar</Typography>
+                            <AddShoppingCartIcon/>
+                            <Typography variant="button">Novo Produto</Typography>
                         </IconButton>
                         <IconButton
-                            onClick={() => navigate("/marca/novo")}
+                            onClick={() => navigate("/marca")}
                             color="primary"
                             sx={{
                                 display: 'flex',
@@ -133,7 +138,7 @@ const MarcaList = () => {
                             }}
                         >
                             <BrandingWatermarkIcon/>
-                            <Typography variant="button">Nova Marca</Typography>
+                            <Typography variant="button">Marca</Typography>
                         </IconButton>
                     </Box>
                     <Paper sx={{width: '100%', overflow: 'hidden'}}>
@@ -142,24 +147,33 @@ const MarcaList = () => {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>ID</TableCell>
-                                        <TableCell>Marca</TableCell>
-                                        <TableCell>Descrição</TableCell>
-                                        <TableCell>Status</TableCell>
+                                        <TableCell>Nome</TableCell>
+                                        <TableCell>Telefone</TableCell>
+                                        <TableCell>CPF/CNPJ</TableCell>
+                                        <TableCell>Endereço</TableCell>
+                                        <TableCell>Nº</TableCell>
+                                        <TableCell>Cidade</TableCell>
                                         <TableCell>Ações</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {marcas
+                                    {produtos
                                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                        .map((marca) => (
-                                            <TableRow hover role="checkbox" tabIndex={-1} key={marca.idMarca}>
-                                                <TableCell>{marca.idMarca}</TableCell>
-                                                <TableCell>{marca.marca}</TableCell>
-                                                <TableCell>{marca.desMarca}</TableCell>
-                                                <TableCell>{marca.status}</TableCell>
+                                        .map((produto) => (
+                                            <TableRow hover role="checkbox" tabIndex={-1} key={produto.idProduto}>
+                                                <TableCell>{produto.idProduto}</TableCell>
+                                                <TableCell>{produto.nome}</TableCell>
+                                                <TableCell>{produto.codigo}</TableCell>
+                                                <TableCell>{produto.precoCusto}</TableCell>
+                                                <TableCell>{produto.precoVenda}</TableCell>
+                                                <TableCell>{produto.estoque}</TableCell>
+                                                <TableCell>{produto.tamanho}</TableCell>
+                                                <TableCell>{produto.tipoRoupa}</TableCell>
+                                                <TableCell>{produto.marca.marca}</TableCell>
+
                                                 <TableCell>
                                                     <IconButton
-                                                        onClick={() => handleEditar(marca)}
+                                                        onClick={() => handleEditar(produto)}
                                                         color="primary"
                                                         sx={{
                                                             borderRadius: '50%',
@@ -173,7 +187,7 @@ const MarcaList = () => {
                                                         <EditIcon/>
                                                     </IconButton>
                                                     <IconButton
-                                                        onClick={() => handleExcluir(marca.idMarca)}
+                                                        onClick={() => handleExcluir(produto.idProduto)}
                                                         color="error"
                                                         sx={{
                                                             borderRadius: '50%',
@@ -195,7 +209,7 @@ const MarcaList = () => {
                         <TablePagination
                             rowsPerPageOptions={[10, 25, 100]}
                             component="div"
-                            count={marcas.length}
+                            count={produtos.length}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
@@ -218,4 +232,4 @@ const MarcaList = () => {
     );
 };
 
-export default MarcaList;
+export default EstoqueList;
