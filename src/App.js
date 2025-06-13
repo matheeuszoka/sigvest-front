@@ -9,7 +9,6 @@ import NovoFuncionario from "./NewPages/Funcionario";
 import NovoProduto from "./NewPages/Produto";
 import NovaMarca from "./NewPages/Marca";
 import Marca from "./pages/Marca"
-import Teste from "./NewPages/Teste"
 
 function App() {
     return (
@@ -26,9 +25,9 @@ function App() {
                     <Route path="/funcionarios/editar/:id" element={<NovoFuncionario/>}/>
                     <Route path="/estoque" element={<Estoque/>}/>
                     <Route path="/produto/novo" element={<NovoProduto/>}/>
+                    <Route path="/produto/editar/:id" element={<NovoProduto/>}/>
                     <Route path="/marca/novo" element={<NovaMarca/>}/>
                     <Route path="/marca" element={<Marca/>}/>
-                    <Route path="/teste" element={<Teste/>}/>
                     <Route path="/marca/editar/:id" element={<NovaMarca/>}/>
 
 

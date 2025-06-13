@@ -155,7 +155,7 @@ const MarcaList = () => {
                                             <TableRow hover role="checkbox" tabIndex={-1} key={marca.idMarca}>
                                                 <TableCell>{marca.idMarca}</TableCell>
                                                 <TableCell>{marca.marca}</TableCell>
-                                                <TableCell>{marca.desMarca}</TableCell>
+                                                <TableCell>{marca.desMarca || "Não Informado"}</TableCell>
                                                 <TableCell>{marca.status}</TableCell>
                                                 <TableCell>
                                                     <IconButton

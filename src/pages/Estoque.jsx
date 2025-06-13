@@ -148,11 +148,13 @@ const EstoqueList = () => {
                                     <TableRow>
                                         <TableCell>ID</TableCell>
                                         <TableCell>Nome</TableCell>
-                                        <TableCell>Telefone</TableCell>
-                                        <TableCell>CPF/CNPJ</TableCell>
-                                        <TableCell>Endereço</TableCell>
-                                        <TableCell>Nº</TableCell>
-                                        <TableCell>Cidade</TableCell>
+                                        <TableCell>Codigo</TableCell>
+                                        <TableCell>Preço Custo</TableCell>
+                                        <TableCell>Preço Venda</TableCell>
+                                        <TableCell>Estoque</TableCell>
+                                        <TableCell>Tamanho</TableCell>
+                                        <TableCell>Tipo da Roupa</TableCell>
+                                        <TableCell>Marca</TableCell>
                                         <TableCell>Ações</TableCell>
                                     </TableRow>
                                 </TableHead>
