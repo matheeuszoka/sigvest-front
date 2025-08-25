@@ -50,9 +50,7 @@ const EstoqueList = () => {
         }
     };
 
-    useEffect(() => {
-        fetchProdutos();
-    }, []);
+    useEffect(() => {fetchProdutos();}, []);
 
     const handleEditar = (produto) => {
         // Redireciona para a página de edição passando o ID como parâmetro
