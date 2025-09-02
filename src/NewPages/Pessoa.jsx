@@ -247,7 +247,7 @@ const PessoaForm = ({onUserAdded}) => {
                 cidade: {
                     nomeCidade: data.localidade || prev.cidade.nomeCidade,
                     estado: {
-                        nomeEstado: getEstadoNome(data.uf) || prev.cidade.estado.nomeEstado,
+                        nomeEstado: data.getEstadoNome(data.uf) || prev.cidade.estado.nomeEstado,
                         uf: data.uf || prev.cidade.estado.uf
                     }
                 }
@@ -268,18 +268,6 @@ const PessoaForm = ({onUserAdded}) => {
     };
 
     // Função auxiliar para converter UF em nome do estado
-    const getEstadoNome = (uf) => {
-        const estados = {
-            'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas',
-            'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo',
-            'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul',
-            'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná',
-            'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte',
-            'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina',
-            'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'
-        };
-        return estados[uf] || '';
-    };
 
     // Função para atualizar os dados dos campos
     const handleInputChange = (e) => {

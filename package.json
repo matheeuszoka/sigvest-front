@@ -12,6 +12,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.9.0",
+    "br-validations": "^0.3.1",
     "cpf-cnpj-validator": "^1.0.3",
     "joi-cpf-cnpj": "^0.1.0",
     "materialize-css": "^1.0.0",
@@ -20,6 +21,7 @@
     "react-input-mask": "^2.0.4",
     "react-router-dom": "^7.6.1",
     "react-scripts": "5.0.1",
+    "validations-br": "^1.4.0",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

@@ -11,8 +11,8 @@ import NovaMarca from "./NewPages/Marca";
 import Marca from "./pages/Marca"
 import Financeiro from "./pages/Financeiro"
 import Fornecedor from "./pages/Fornecedor";
-import fornecedorPage from "./NewPages/Fornecedor";
-
+import novoFornecedor from "./NewPages/Fornecedor";
+import Teste from "./NewPages/PessoaNovo";
 
 function App() {
     return (
@@ -22,8 +22,8 @@ function App() {
                     <Route path="/" exact element={<Home/>}/>
                     <Route path="/produtos" exact element={<Estoque/>}/>
                     <Route path="/pessoa" exact element={<Pessoa/>}/>
-                    <Route path="/pessoa/novo" element={<NovaPessoa/>}/>
-                    <Route path="/pessoa/editar/:id" element={<NovaPessoa/>}/>
+                    <Route path="/pessoa/novo" element={<Teste/>}/>
+                    <Route path="/pessoa/editar/:id" element={<Teste/>}/>
                     <Route path="/funcionarios" element={<Funcionario/>}/>
                     <Route path="/funcionarios/novo" element={<NovoFuncionario/>}/>
                     <Route path="/funcionarios/editar/:id" element={<NovoFuncionario/>}/>
@@ -35,7 +35,9 @@ function App() {
                     <Route path="/marca/editar/:id" element={<NovaMarca/>}/>
                     <Route path="/financeiro" element={<Financeiro/>}/>
                     <Route path="/fornecedor/" element={<Fornecedor/>}/>
-                    <Route path ="/fornecedor/novo" element={<fornecedorPage/>}/>
+                    <Route path ="/fornecedor/novo" element={<novoFornecedor/>}/>
+                    <Route path ="/fornecedor/novo" element={<novoFornecedor/>}/>
+                    <Route path ="/pessoa/novoTeste" element={<Teste/>}/>
 
 
                 </Routes>
