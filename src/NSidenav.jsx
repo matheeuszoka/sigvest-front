@@ -22,6 +22,10 @@ import StoreIcon from '@mui/icons-material/Store';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import BusinessIcon from '@mui/icons-material/Business';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+import Collapse from '@mui/material/Collapse';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import {useState, useEffect} from "react"
 
 
 import logo from "./logo.png";
@@ -54,9 +58,7 @@ const DrawerHeader = styled('div')(({theme}) => ({
     alignItems: 'center',
     justifyContent: 'flex-end',
     padding: theme.spacing(0, 1),
-    // necessary for content to be below app bar
     ...theme.mixins.toolbar,
-
 }));
 
 
@@ -93,6 +95,35 @@ export default function MiniDrawer() {
     const [open, setOpen] = React.useState(true);
 
     const navigate = useNavigate();
+    const [openFinanceiro, setOpenFinanceiro] = useState(false);
+    const [openProdutos, setOpenProdutos] = useState(false);
+    const [openGerencias, setOpenGerencias] = useState(false);
+
+    const closeAllSubmenus = () => {
+        setOpenFinanceiro(false);
+        setOpenProdutos(false);
+        setOpenGerencias(false);
+    };
+
+    useEffect(() => {
+        if (!open) closeAllSubmenus();
+    }, [open]);
+    // Substitua a função lockScroll por esta:
+
+    const lockScroll = (lock) => {
+        if (lock) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    };
+
+
+// E simplificar o useEffect assim:
+    React.useEffect(() => {
+        const algumAberto = openFinanceiro || openProdutos || openGerencias;
+        lockScroll(algumAberto);
+    }, [openFinanceiro, openProdutos, openGerencias]);
 
     return (
         <Box sx={{display: 'flex'}}>
@@ -103,10 +134,22 @@ export default function MiniDrawer() {
                 sx={{
                     '& .MuiDrawer-paper': {
                         backgroundColor: '#AEB8D6',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        '&::-webkit-scrollbar': {
+                            display: 'none',
+                        },
                     },
                 }}
             >
-                <DrawerHeader>
+                <DrawerHeader
+                    sx={{
+                        position: openFinanceiro || openProdutos || openGerencias ? 'sticky' : 'relative',
+                        top: 0,
+                        zIndex: 10,
+                        backgroundColor: '#AEB8D6',
+                    }}
+                >
                     <Box sx={{display: 'flex', justifyContent: 'center', flexGrow: 1}}>
                         <img src={logo} alt="Logo" style={{height: '100px', width: 'auto'}}/>
                     </Box>
@@ -205,28 +248,55 @@ export default function MiniDrawer() {
                             />
                         </ListItemButton>
                     </ListItem>
-                    <ListItem key="home" disablePadding>
+                    {/* Item pai: Financeiro (toggle do submenu) */}
+                    <ListItem disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/financeiro")}
+                            onClick={() => { if (open) setOpenFinanceiro(prev => !prev); }}
+                            aria-controls="submenu-financeiro"
+                            aria-expanded={openFinanceiro ? 'true' : 'false'}
                             sx={{
-                                '&:hover': {
-                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
-                                }
+                                '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' }
                             }}
                         >
                             <ListItemIcon>
-                                <AttachMoneyIcon sx={{color: '#142442'}}/>
+                                <AttachMoneyIcon sx={{ color: '#142442' }} />
                             </ListItemIcon>
                             <ListItemText
                                 primary="Financeiro"
-                                sx={{
-                                    '& .MuiListItemText-primary': {
-                                        color: '#142442'
-                                    }
-                                }}
+                                sx={{ '& .MuiListItemText-primary': { color: '#142442' } }}
                             />
+                            {openFinanceiro ? <ExpandLess sx={{ color: '#142442' }} /> : <ExpandMore sx={{ color: '#142442' }} />}
                         </ListItemButton>
                     </ListItem>
+
+                    {/* Submenu: Receber / Pagar */}
+                    <Collapse in={open && openFinanceiro} timeout="auto" unmountOnExit>
+                        <List component="div" disablePadding id="submenu-financeiro">
+                            <ListItem disablePadding>
+                                <ListItemButton
+                                    sx={{
+                                        pl: 4,
+                                        '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' }
+                                    }}
+                                    onClick={() => navigate('/financeiro/receber')}
+                                >
+                                    <ListItemText primary="Contas a receber" />
+                                </ListItemButton>
+                            </ListItem>
+
+                            <ListItem disablePadding>
+                                <ListItemButton
+                                    sx={{
+                                        pl: 4,
+                                        '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' }
+                                    }}
+                                    onClick={() => navigate('/financeiro/pagar')}
+                                >
+                                    <ListItemText primary="Contas a pagar" />
+                                </ListItemButton>
+                            </ListItem>
+                        </List>
+                    </Collapse>
                     <ListItem key="home" disablePadding>
                         <ListItemButton
                             onClick={() => navigate('/fornecedor')}
@@ -253,7 +323,7 @@ export default function MiniDrawer() {
 
                     <ListItem key="home" disablePadding>
                         <ListItemButton
-                            onClick={() => alert("Em Breve!")}
+                            onClick={() => navigate('/compras')}
                             sx={{
                                 '&:hover': {
                                     backgroundColor: 'rgba(20, 36, 66, 0.1)',
@@ -273,28 +343,93 @@ export default function MiniDrawer() {
                             />
                         </ListItemButton>
                     </ListItem>
-                    <ListItem key="home" disablePadding>
+                    {/* Item pai: Produtos */}
+                    <ListItem disablePadding>
                         <ListItemButton
-                            onClick={() => navigate("/estoque")}
-                            sx={{
-                                '&:hover': {
-                                    backgroundColor: 'rgba(20, 36, 66, 0.1)',
-                                }
-                            }}
+                            onClick={() => { if (open) setOpenProdutos(prev => !prev); }}
+                            aria-controls="submenu-produtos"
+                            aria-expanded={openProdutos ? 'true' : 'false'}
+                            sx={{ '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
                         >
                             <ListItemIcon>
-                                <InventoryIcon sx={{color: '#142442'}}/>
+                                {/* Reuse um ícone já importado no projeto, se tiver, ou importe um como Category/Inventory */}
+                                <ShoppingCartIcon sx={{ color: '#142442' }} />
                             </ListItemIcon>
                             <ListItemText
-                                primary="Estoque"
-                                sx={{
-                                    '& .MuiListItemText-primary': {
-                                        color: '#142442'
-                                    }
-                                }}
+                                primary="Produtos"
+                                sx={{ '& .MuiListItemText-primary': { color: '#142442' } }}
                             />
+                            {openProdutos ? <ExpandLess sx={{ color: '#142442' }} /> : <ExpandMore sx={{ color: '#142442' }} />}
                         </ListItemButton>
                     </ListItem>
+
+                    <Collapse in={openProdutos} timeout={300} unmountOnExit>
+                        <List component="div" disablePadding id="submenu-produtos">
+                            {/* Link direto para lista/cadastro de produtos */}
+                            <ListItem disablePadding>
+                                <ListItemButton
+                                    sx={{ pl: 4, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                    onClick={() => navigate('/produtos')}
+                                >
+                                    <ListItemText primary="Produto" />
+                                </ListItemButton>
+                            </ListItem>
+
+                            {/* Segundo nível: Gerências */}
+                            <ListItem disablePadding>
+                                <ListItemButton
+                                    onClick={() => setOpenGerencias((prev) => !prev)}
+                                    aria-controls="submenu-gerencias"
+                                    aria-expanded={openGerencias ? 'true' : 'false'}
+                                    sx={{ pl: 4, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                >
+                                    <ListItemText primary="Gerências" />
+                                    {openGerencias ? <ExpandLess sx={{ color: '#142442' }} /> : <ExpandMore sx={{ color: '#142442' }} />}
+                                </ListItemButton>
+                            </ListItem>
+
+                            <Collapse in={openGerencias} timeout={300} unmountOnExit>
+                                <List component="div" disablePadding id="submenu-gerencias">
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            sx={{ pl: 6, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                            onClick={() => navigate('/produtos/cores')}
+                                        >
+                                            <ListItemText primary="Cores" />
+                                        </ListItemButton>
+                                    </ListItem>
+
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            sx={{ pl: 6, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                            onClick={() => navigate('/produtos/tamanhos')}
+                                        >
+                                            <ListItemText primary="Tamanhos" />
+                                        </ListItemButton>
+                                    </ListItem>
+
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            sx={{ pl: 6, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                            onClick={() => navigate('/produtos/tipos')}
+                                        >
+                                            <ListItemText primary="Tipos" />
+                                        </ListItemButton>
+                                    </ListItem>
+
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            sx={{ pl: 6, '&:hover': { backgroundColor: 'rgba(20, 36, 66, 0.1)' } }}
+                                            onClick={() => navigate('/produto/marca')}
+                                        >
+                                            <ListItemText primary="Marcas" />
+                                        </ListItemButton>
+                                    </ListItem>
+                                </List>
+                            </Collapse>
+                        </List>
+                    </Collapse>
+
 
                 </List>
                 <Divider/>

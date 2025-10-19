@@ -1,31 +1,70 @@
-import React, {useState, useEffect} from 'react';
-import {Box, Paper, TextField, Typography, Button, Stepper, Step, StepLabel, Snackbar, Alert} from '@mui/material';
-import {useNavigate, useParams, useLocation} from 'react-router-dom';
-import Sidenav from "../NSidenav";
-import axios from "axios";
-import { MenuItem } from '@mui/material';
-import validator from "cpf-cnpj-validator";
-import { cpf, cnpj } from 'cpf-cnpj-validator';
+import React, { useState, useEffect } from 'react';
+import {
+    Box,
+    Paper,
+    TextField,
+    Typography,
+    Button,
+    Snackbar,
+    Alert,
+    MenuItem,
+    Card,
+    CardContent,
+    Grid,
+    Divider,
+    Chip,
+    IconButton,
+    Tooltip,
+    CircularProgress,
+    Autocomplete,
+    Switch,
+    FormControlLabel
+} from '@mui/material';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import Sidenav from '../NSidenav';
+import { cpf } from 'cpf-cnpj-validator';
 
+// Ícones
+import PersonIcon from '@mui/icons-material/Person';
+import BusinessIcon from '@mui/icons-material/Business';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
+import EmailIcon from '@mui/icons-material/Email';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import BadgeIcon from '@mui/icons-material/Badge';
+import SaveIcon from '@mui/icons-material/Save';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import WorkIcon from '@mui/icons-material/Work';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
-const steps = ['Informações Pessoais', 'Endereço', 'Confirmação'];
-
-const FuncionarioForm = ({onUserAdded}) => {
+const FuncionarioForm = ({ onUserAdded }) => {
     const navigate = useNavigate();
-    const { id } = useParams(); // Para pegar o ID da URL
-    const location = useLocation(); // Para pegar dados passados via state
-    const [step, setStep] = useState(0);
+    const { id } = useParams();
+    const location = useLocation();
     const [isEditing, setIsEditing] = useState(false);
 
     // Estados do formulário
     const [nomeCompleto, setNomeCompleto] = useState('');
     const [dataNascimento, setDataNascimento] = useState('');
-    const [cpfcnpj, setCpfcnpj] = useState('');
+    const [cpfFunc, setCpfFunc] = useState('');
     const [rg, setRg] = useState('');
     const [telefone, setTelefone] = useState('');
     const [email, setEmail] = useState('');
-    const [tipo, setTipo] = useState('');
-    const [atrib, setAtrib] = useState('FUNCIONARIO');
+    const [dataAdmissao, setDataAdmissao] = useState('');
+    const [status, setStatus] = useState(true);
+
+    // Estados do Autocomplete de Cargo
+    const [cargoSelecionado, setCargoSelecionado] = useState(null);
+    const [cargosOptions, setCargosOptions] = useState([]);
+    const [inputValueCargo, setInputValueCargo] = useState('');
+    const [loadingCargos, setLoadingCargos] = useState(false);
+
+    // Estados do Endereço
     const [endereco, setEndereco] = useState({
         logradouro: '',
         numero: '',
@@ -41,157 +80,77 @@ const FuncionarioForm = ({onUserAdded}) => {
         }
     });
 
+    // Estados de controle
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-    const [loadingCep, setLoadingCep] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [carregandoCep, setCarregandoCep] = useState(false);
+    const [error, setError] = useState('');
+    const [cpfError, setCpfError] = useState('');
 
-    // Verificar se está editando quando o componente monta
     useEffect(() => {
         if (id) {
             setIsEditing(true);
-            fetchPessoaById(id);
-        } else if (location.state?.pessoa) {
+            fetchFuncionarioById(id);
+        } else if (location.state?.funcionario) {
             setIsEditing(true);
-            preencherFormulario(location.state.pessoa);
+            preencherFormulario(location.state.funcionario);
         }
     }, [id, location.state]);
 
-    // Buscar pessoa por ID
-    const fetchPessoaById = async (idPessoa) => {
+    // Buscar cargos com like - chamada para o endpoint /likecargo/{cargo}
+    const buscarCargos = async (termoBusca) => {
+        if (!termoBusca || termoBusca.trim().length < 2) {
+            setCargosOptions([]);
+            return;
+        }
+
+        setLoadingCargos(true);
+        try {
+            const response = await axios.get(`http://localhost:8080/cargos/likecargo/${termoBusca.trim()}`);
+            setCargosOptions(response.data || []);
+        } catch (error) {
+            console.error('Erro ao buscar cargos:', error);
+            setCargosOptions([]);
+        } finally {
+            setLoadingCargos(false);
+        }
+    };
+
+    // useEffect para busca de cargos
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            buscarCargos(inputValueCargo);
+        }, 300); // Debounce de 300ms
+
+        return () => clearTimeout(timeoutId);
+    }, [inputValueCargo]);
+
+    // Funções de API
+    const fetchFuncionarioById = async (idFuncionario) => {
         setLoading(true);
         try {
-            const response = await axios.get(`http://localhost:8080/pessoa/${idPessoa}`);
+            const response = await axios.get(`http://localhost:8080/funcionario/${idFuncionario}`);
             preencherFormulario(response.data);
         } catch (error) {
-            console.error('Erro ao buscar funcionario:', error);
+            console.error('Erro ao buscar funcionário:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage('Erro ao carregar dados do funcionario');
+            setSnackbarMessage('Erro ao carregar dados do funcionário');
             setOpenSnackbar(true);
         } finally {
             setLoading(false);
         }
     };
 
-    // Preencher formulário com dados da pessoa
-    const preencherFormulario = (pessoa) => {
-        setNomeCompleto(pessoa.nomeCompleto || '');
-
-        // Formatação da data para o input date
-        let dataFormatada = '';
-        if (pessoa.dataNascimento) {
-            // Se a data vier no formato ISO (YYYY-MM-DD), usar diretamente
-            if (pessoa.dataNascimento.includes('-')) {
-                dataFormatada = pessoa.dataNascimento.split('T')[0]; // Remove a parte do horário se existir
-            } else {
-                // Se vier em outro formato, tentar converter
-                const data = new Date(pessoa.dataNascimento);
-                if (!isNaN(data.getTime())) {
-                    dataFormatada = data.toISOString().split('T')[0];
-                }
-            }
-        }
-        setDataNascimento(dataFormatada);
-
-        setCpfcnpj(formatCpfCnpj(pessoa.cpfcnpj || ''));
-        setRg(formatRg(pessoa.rg || ''));
-        setTelefone(formatTelefone(pessoa.telefone || ''));
-        setEmail(pessoa.email || '');
-        setTipo(pessoa.tipo || '');
-        setAtrib(pessoa.atrib || 'FUNCIONARIO');
-
-        if (pessoa.endereco) {
-            setEndereco({
-                logradouro: pessoa.endereco.logradouro || '',
-                numero: pessoa.endereco.numero || '',
-                complemento: pessoa.endereco.complemento || '',
-                bairro: pessoa.endereco.bairro || '',
-                cep: formatCep(pessoa.endereco.cep || ''),
-                cidade: {
-                    nomeCidade: pessoa.endereco.cidade?.nomeCidade || '',
-                    estado: {
-                        nomeEstado: pessoa.endereco.cidade?.estado?.nomeEstado || '',
-                        uf: pessoa.endereco.cidade?.estado?.uf || ''
-                    }
-                }
-            });
-        }
-    };
-
-    // Função para passar para a próxima etapa
-    const nextStep = () => {
-        if (step < steps.length - 1) {
-            setStep(step + 1);
-        }
-    };
-
-    const prevStep = () => {
-        if (step === 0) {
-            navigate('/funcionarios');
-        } else {
-            setStep(step - 1);
-        }
-    };
-
-    const [cpfcnpjError, setCpfcnpjError] = useState('');
-
-// Função para formatar CPF/CNPJ
-    const formatCpfCnpj = (value) => {
+    // Funções de formatação
+    const formatCpf = (value) => {
         const cleanValue = value.replace(/\D/g, '');
-
-        if (cleanValue.length <= 11) {
-            return cpf.format(cleanValue);
-        } else {
-            return cnpj.format(cleanValue);
-        }
+        return cpf.format(cleanValue);
     };
 
-// Função para validar CPF/CNPJ
-    const validarCpfCnpj = (value) => {
-        if (!value) return false;
-
-        const cleanValue = value.replace(/\D/g, '');
-
-        if (cleanValue.length === 11) {
-            return cpf.isValid(value);
-        } else if (cleanValue.length === 14) {
-            return cnpj.isValid(value);
-        }
-
-        return false;
-    };
-
-// Handler modificado para CPF/CNPJ
-    const handleCpfCnpjChange = (e) => {
-        const formattedValue = formatCpfCnpj(e.target.value);
-        handleInputChange({
-            target: {
-                name: 'cpfcnpj',
-                value: formattedValue
-            }
-        });
-
-        // Limpar erro ao digitar
-        if (cpfcnpjError) setCpfcnpjError('');
-    };
-
-// Validação ao sair do campo
-    const handleCpfCnpjBlur = (e) => {
-        const value = e.target.value;
-
-        if (value && !validarCpfCnpj(value)) {
-            setCpfcnpjError('CPF ou CNPJ inválido');
-        } else {
-            setCpfcnpjError('');
-        }
-    };
-
-
-    // Função para formatar telefone
     const formatTelefone = (value) => {
         const cleanValue = value.replace(/\D/g, '');
-
         if (cleanValue.length <= 10) {
             return cleanValue
                 .replace(/(\d{2})(\d)/, '($1) $2')
@@ -203,31 +162,92 @@ const FuncionarioForm = ({onUserAdded}) => {
         }
     };
 
-    // Função para formatar CEP
     const formatCep = (value) => {
         const cleanValue = value.replace(/\D/g, '');
         return cleanValue.replace(/(\d{5})(\d)/, '$1-$2');
     };
 
-    // Função para formatar RG
     const formatRg = (value) => {
         const cleanValue = value.replace(/\D/g, '');
         return cleanValue
             .replace(/(\d{2})(\d)/, '$1.$2')
             .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d{1})/, '$1-$2');
+            .replace(/(\d{3})(\d{1})$/, '$1-$2');
     };
 
-    // Função para buscar endereço pelo CEP
-    const buscarEnderecoPorCep = async (cep) => {
-        const cepLimpo = cep.replace(/\D/g, '');
+    // Validação
+    const validaCpf = (value) => {
+        if (!value) return false;
+        const cleanValue = value.replace(/\D/g, '');
+        return cpf.isValid(cleanValue);
+    };
 
-        if (cepLimpo.length !== 8) {
-            return;
+    // Preenchimento do formulário
+    const preencherFormulario = (funcionarioData) => {
+        let dataFormatada = '';
+        if (funcionarioData.dataNascimento) {
+            if (funcionarioData.dataNascimento.includes('-')) {
+                dataFormatada = funcionarioData.dataNascimento.split('T')[0];
+            } else {
+                const data = new Date(funcionarioData.dataNascimento);
+                if (!isNaN(data.getTime())) {
+                    dataFormatada = data.toISOString().split('T')[0];
+                }
+            }
         }
 
-        setLoadingCep(true);
+        let dataAdmissaoFormatada = '';
+        if (funcionarioData.dataAdmimissao) {
+            if (funcionarioData.dataAdmimissao.includes('-')) {
+                dataAdmissaoFormatada = funcionarioData.dataAdmimissao.split('T')[0];
+            } else {
+                const data = new Date(funcionarioData.dataAdmimissao);
+                if (!isNaN(data.getTime())) {
+                    dataAdmissaoFormatada = data.toISOString().split('T')[0];
+                }
+            }
+        }
 
+        setNomeCompleto(funcionarioData.nomeCompleto || '');
+        setDataNascimento(dataFormatada);
+        setCpfFunc(formatCpf(funcionarioData.cpfFunc || ''));
+        setRg(formatRg(funcionarioData.rg || ''));
+        setTelefone(formatTelefone(funcionarioData.telefone || ''));
+        setEmail(funcionarioData.email || '');
+        setDataAdmissao(dataAdmissaoFormatada);
+        setStatus(funcionarioData.status?.toString() || 'true');
+
+        // Preencher cargo selecionado
+        if (funcionarioData.cargo) {
+            setCargoSelecionado(funcionarioData.cargo);
+            setInputValueCargo(funcionarioData.cargo.nomeCargo || '');
+        }
+
+        // Preencher endereço
+        if (funcionarioData.endereco) {
+            setEndereco({
+                logradouro: funcionarioData.endereco.logradouro || '',
+                numero: funcionarioData.endereco.numero || '',
+                complemento: funcionarioData.endereco.complemento || '',
+                bairro: funcionarioData.endereco.bairro || '',
+                cep: formatCep(funcionarioData.endereco.cep || ''),
+                cidade: {
+                    nomeCidade: funcionarioData.endereco.cidade?.nomeCidade || '',
+                    estado: {
+                        nomeEstado: funcionarioData.endereco.cidade?.estado?.nomeEstado || '',
+                        uf: funcionarioData.endereco.cidade?.estado?.uf || ''
+                    }
+                }
+            });
+        }
+    };
+
+    // Busca CEP
+    const buscarEnderecoPorCep = async (cep) => {
+        const cepLimpo = cep.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) return;
+
+        setCarregandoCep(true);
         try {
             const response = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
             const data = response.data;
@@ -246,138 +266,131 @@ const FuncionarioForm = ({onUserAdded}) => {
                 cidade: {
                     nomeCidade: data.localidade || prev.cidade.nomeCidade,
                     estado: {
-                        nomeEstado: getEstadoNome(data.uf) || prev.cidade.estado.nomeEstado,
+                        nomeEstado: data.estado || prev.cidade.estado.nomeEstado,
                         uf: data.uf || prev.cidade.estado.uf
                     }
                 }
             }));
 
             setSnackbarSeverity('success');
-            setSnackbarMessage('Endereço encontrado e preenchido automaticamente!');
+            setSnackbarMessage('Endereço encontrado automaticamente');
             setOpenSnackbar(true);
-
         } catch (error) {
-            console.error('Erro ao buscar CEP:', error);
+            console.log('Erro ao buscar CEP:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage('Erro ao buscar CEP. Verifique sua conexão.');
+            setSnackbarMessage('Erro ao buscar CEP');
             setOpenSnackbar(true);
         } finally {
-            setLoadingCep(false);
+            setCarregandoCep(false);
         }
     };
 
-    // Função auxiliar para converter UF em nome do estado
-    const getEstadoNome = (uf) => {
-        const estados = {
-            'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas',
-            'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo',
-            'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul',
-            'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná',
-            'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte',
-            'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina',
-            'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'
-        };
-        return estados[uf] || '';
+    // Handlers de eventos
+    const handleCpfChange = (e) => {
+        const valorFormatado = formatCpf(e.target.value);
+        setCpfFunc(valorFormatado);
+        if (cpfError) {
+            setCpfError('');
+        }
     };
 
-    // Função para atualizar os dados dos campos
+    const handleCpfBlur = (e) => {
+        const value = e.target.value;
+        if (value && !validaCpf(value)) {
+            setCpfError('CPF inválido');
+        } else {
+            setCpfError('');
+        }
+    };
+
     const handleInputChange = (e) => {
-        const {name, value} = e.target;
-
-        if (name === 'nomeCompleto') setNomeCompleto(value);
-        if (name === 'dataNascimento') setDataNascimento(value);
-        if (name === 'cpfcnpj') {
-            const formatted = formatCpfCnpj(value);
-            setCpfcnpj(formatted);
-        }
-        if (name === 'rg') {
-            const formatted = formatRg(value);
-            setRg(formatted);
-        }
-        if (name === 'telefone') {
-            const formatted = formatTelefone(value);
-            setTelefone(formatted);
-        }
-        if (name === 'email') setEmail(value);
-        if (name === 'tipo') setTipo(value);
-        if (name === 'atrib') setAtrib(value);
-
-        // Para campos do endereço básicos
-        if (['logradouro', 'numero', 'complemento', 'bairro'].includes(name)) {
-            setEndereco(prev => ({
-                ...prev,
-                [name]: value
-            }));
-        }
-
-        // Para CEP com formatação e busca automática
-        if (name === 'cep') {
-            const formatted = formatCep(value);
-            setEndereco(prev => ({
-                ...prev,
-                cep: formatted
-            }));
-
-            const cepLimpo = value.replace(/\D/g, '');
-            if (cepLimpo.length === 8) {
-                buscarEnderecoPorCep(cepLimpo);
-            }
-        }
-
-        // Para cidade
-        if (name === 'nomeCidade') {
-            setEndereco(prev => ({
-                ...prev,
-                cidade: {
-                    ...prev.cidade,
-                    nomeCidade: value
+        const { name, value } = e.target;
+        switch (name) {
+            case 'nomeCompleto':
+                setNomeCompleto(value);
+                break;
+            case 'dataNascimento':
+                setDataNascimento(value);
+                break;
+            case 'rg':
+                const formatadoRg = formatRg(value);
+                setRg(formatadoRg);
+                break;
+            case 'telefone':
+                const formatadoTel = formatTelefone(value);
+                setTelefone(formatadoTel);
+                break;
+            case 'email':
+                setEmail(value);
+                break;
+            case 'cep':
+                const formatadoCep = formatCep(value);
+                setEndereco(prev => ({ ...prev, cep: formatadoCep }));
+                const cepLimpo = value.replace(/\D/g, '');
+                if (cepLimpo.length === 8) {
+                    buscarEnderecoPorCep(cepLimpo);
                 }
-            }));
-        }
-
-        // Para campos do estado
-        if (name === 'nomeEstado') {
-            setEndereco(prev => ({
-                ...prev,
-                cidade: {
-                    ...prev.cidade,
-                    estado: {
-                        ...prev.cidade.estado,
-                        nomeEstado: value
+                break;
+            case 'logradouro':
+            case 'numero':
+            case 'complemento':
+            case 'bairro':
+                setEndereco(prev => ({ ...prev, [name]: value }));
+                break;
+            case 'nomeCidade':
+                setEndereco(prev => ({
+                    ...prev,
+                    cidade: { ...prev.cidade, nomeCidade: value }
+                }));
+                break;
+            case 'nomeEstado':
+                setEndereco(prev => ({
+                    ...prev,
+                    cidade: {
+                        ...prev.cidade,
+                        estado: { ...prev.cidade.estado, nomeEstado: value }
                     }
-                }
-            }));
-        }
-
-        if (name === 'uf') {
-            setEndereco(prev => ({
-                ...prev,
-                cidade: {
-                    ...prev.cidade,
-                    estado: {
-                        ...prev.cidade.estado,
-                        uf: value.toUpperCase()
+                }));
+                break;
+            case 'uf':
+                setEndereco(prev => ({
+                    ...prev,
+                    cidade: {
+                        ...prev.cidade,
+                        estado: { ...prev.cidade.estado, uf: value.toUpperCase() }
                     }
-                }
-            }));
+                }));
+                break;
+            default:
+                break;
         }
     };
 
-    // Função para enviar os dados para a API
+    // Submit do formulário
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
 
+        if (!cargoSelecionado) {
+            setSnackbarSeverity('error');
+            setSnackbarMessage('Selecione um cargo para o funcionário');
+            setOpenSnackbar(true);
+            return;
+        }
+
+        setLoading(true);
         try {
-            const pessoaData = {
+            const funcionarioData = {
                 nomeCompleto,
                 dataNascimento,
-                cpfcnpj: cpfcnpj.replace(/\D/g, ''),
+                cpfFunc: cpfFunc.replace(/\D/g, ''),
                 rg: rg.replace(/\D/g, ''),
                 telefone: telefone.replace(/\D/g, ''),
                 email,
-                tipo,
-                atrib,
+                dataAdmimissao: dataAdmissao, // Note: mantendo o nome como está no backend
+                status,
+                cargo: {
+                    idCargo: cargoSelecionado.idCargo // Enviando apenas o ID do cargo
+                },
                 endereco: {
                     logradouro: endereco.logradouro,
                     numero: endereco.numero,
@@ -395,356 +408,563 @@ const FuncionarioForm = ({onUserAdded}) => {
             };
 
             if (isEditing) {
-                await axios.put(`http://localhost:8080/pessoa/${id}`, pessoaData);
+                await axios.put(`http://localhost:8080/funcionario/${id}`, funcionarioData);
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Funcionario atualizado com sucesso');
+                setSnackbarMessage('Funcionário atualizado com sucesso!');
             } else {
-                // Criar nova pessoa
-                await axios.post("http://localhost:8080/pessoa", pessoaData);
+                await axios.post('http://localhost:8080/funcionario', funcionarioData);
                 setSnackbarSeverity('success');
-                setSnackbarMessage('Funcionario cadastrado com sucesso');
+                setSnackbarMessage('Funcionário cadastrado com sucesso!');
             }
 
             setOpenSnackbar(true);
-
             if (onUserAdded) {
                 onUserAdded();
             }
 
             setTimeout(() => {
                 navigate('/funcionarios');
-            }, 1000);
-
+            }, 2000);
         } catch (error) {
-            console.error("Erro ao salvar funcionario:", error);
+            console.log('Erro ao salvar:', error);
             setSnackbarSeverity('error');
-            setSnackbarMessage(isEditing ? 'Erro ao atualizar funcionario' : 'Erro ao cadastrar funcionario');
+            setSnackbarMessage(error.response?.data?.message || 'Erro ao salvar funcionário');
             setOpenSnackbar(true);
         } finally {
             setLoading(false);
         }
     };
 
-    // Renderiza a etapa atual do formulário
-    const renderStepContent = (stepIndex) => {
-        switch (stepIndex) {
-            case 0:
-                return (
-                    <Box>
-                        <TextField
-                            label="Nome Completo"
-                            variant="outlined"
-                            fullWidth
-                            margin="normal"
-                            name="nomeCompleto"
-                            value={nomeCompleto}
-                            onChange={handleInputChange}
-                            required={true}
-                        />
-                        <TextField
-                            label="Data de Nascimento"
-                            type="date"
-                            variant="outlined"
-                            fullWidth
-                            margin="normal"
-                            name="dataNascimento"
-                            value={dataNascimento}
-                            onChange={handleInputChange}
-                            required={true}
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
-                        />
-
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                label="CPF/CNPJ"
-                                variant="outlined"
-                                fullWidth
-                                margin="normal"
-                                name="cpfcnpj"
-                                value={cpfcnpj}
-                                onChange={handleCpfCnpjChange}
-                                onBlur={handleCpfCnpjBlur}
-                                required
-                                error={!!cpfcnpjError}
-                                helperText={cpfcnpjError}
-                                placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                                inputProps={{
-                                    maxLength: 18 // Fixo para CNPJ com máscara
-                                }}
-                            />
-                            <TextField
-                                label="RG"
-                                variant="outlined"
-                                fullWidth
-                                margin="normal"
-                                name="rg"
-                                required={true}
-                                value={rg}
-                                onChange={handleInputChange}
-                                placeholder="99.999.999-9"
-                                inputProps={{
-                                    maxLength: 12
-                                }}
-                            />
-                        </Box>
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                label="Telefone"
-                                type="text"
-                                variant="outlined"
-                                fullWidth
-                                margin="normal"
-                                name="telefone"
-                                value={telefone}
-                                required={true}
-                                onChange={handleInputChange}
-                                placeholder="(99) 99999-9999"
-                                inputProps={{
-                                    maxLength: 15
-                                }}
-                            />
-                            <TextField
-                                label="Email"
-                                type="email"
-                                variant="outlined"
-                                fullWidth
-                                margin="normal"
-                                name="email"
-                                value={email}
-                                onChange={handleInputChange}
-                            />
-                        </Box>
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                select
-                                label="Tipo de Pessoa"
-                                variant="outlined"
-                                required
-                                fullWidth
-                                margin="normal"
-                                name="tipo"
-                                value={tipo}
-                                onChange={handleInputChange}
-                            >
-                                <MenuItem value="PESSOA_FISICA">Pessoa Física</MenuItem>
-                                <MenuItem value="PESSOA_JURIDICA">Pessoa Jurídica</MenuItem>
-                            </TextField>
-                            <TextField
-                                label="Atribuição"
-                                variant="outlined"
-                                required
-                                fullWidth
-                                margin="normal"
-                                name="atrib"
-                                value={atrib}
-                                onChange={handleInputChange}
-                                InputProps={{
-                                    readOnly: true,
-                                }}
-                            />
-                        </Box>
-                    </Box>
-                );
-            case 1:
-                return (
-                    <Box>
-                        <TextField
-                            label="Logradouro"
-                            variant="outlined"
-                            fullWidth
-                            margin="normal"
-                            name="logradouro"
-                            value={endereco.logradouro}
-                            onChange={handleInputChange}
-                        />
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                label="Número"
-                                variant="outlined"
-                                margin="normal"
-                                name="numero"
-                                value={endereco.numero}
-                                onChange={handleInputChange}
-                                sx={{width: '30%'}}
-                            />
-                            <TextField
-                                label="Complemento"
-                                variant="outlined"
-                                margin="normal"
-                                name="complemento"
-                                value={endereco.complemento}
-                                onChange={handleInputChange}
-                                sx={{width: '70%'}}
-                            />
-                        </Box>
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                label="Bairro"
-                                variant="outlined"
-                                margin="normal"
-                                name="bairro"
-                                value={endereco.bairro}
-                                onChange={handleInputChange}
-                                sx={{width: '60%'}}
-                            />
-                            <TextField
-                                label="CEP"
-                                variant="outlined"
-                                margin="normal"
-                                name="cep"
-                                value={endereco.cep}
-                                onChange={handleInputChange}
-                                sx={{width: '40%'}}
-                                placeholder="00000-000"
-                                inputProps={{
-                                    maxLength: 9
-                                }}
-                                helperText={loadingCep ? "Buscando endereço..." : "Preenchimento automático"}
-                                disabled={loadingCep}
-                            />
-                        </Box>
-                        <TextField
-                            label="Cidade"
-                            variant="outlined"
-                            fullWidth
-                            margin="normal"
-                            name="nomeCidade"
-                            value={endereco.cidade.nomeCidade}
-                            onChange={handleInputChange}
-                            helperText="Nome da cidade"
-                        />
-                        <Box sx={{display: 'flex', gap: 2}}>
-                            <TextField
-                                label="Estado"
-                                variant="outlined"
-                                margin="normal"
-                                name="nomeEstado"
-                                value={endereco.cidade.estado.nomeEstado}
-                                onChange={handleInputChange}
-                                sx={{width: '70%'}}
-                                helperText="Nome completo do estado"
-                            />
-                            <TextField
-                                label="UF"
-                                variant="outlined"
-                                margin="normal"
-                                name="uf"
-                                value={endereco.cidade.estado.uf}
-                                onChange={handleInputChange}
-                                sx={{width: '30%'}}
-                                helperText="Ex: SP, RJ"
-                                inputProps={{maxLength: 2}}
-                            />
-                        </Box>
-                    </Box>
-                );
-            case 2:
-                return (
-                    <Box>
-                        <Typography variant="h6" sx={{mb: 2}}>
-                            {isEditing ? 'Confirmar Alterações' : 'Confirmar Cadastro'}
-                        </Typography>
-                        <Typography variant="h6">Informações Pessoais</Typography>
-                        <Typography variant="body1"><strong>Nome Completo:</strong> {nomeCompleto}</Typography>
-                        <Typography variant="body1"><strong>Data de Nascimento:</strong> {dataNascimento}</Typography>
-                        <Typography variant="body1"><strong>CPF/CNPJ:</strong> {cpfcnpj}</Typography>
-                        <Typography variant="body1"><strong>RG:</strong> {rg}</Typography>
-                        <Typography variant="body1"><strong>Telefone:</strong> {telefone}</Typography>
-                        <Typography variant="body1"><strong>Email:</strong> {email}</Typography>
-                        <Typography variant="body1"><strong>Tipo:</strong> {tipo}</Typography>
-                        <Typography variant="body1"><strong>Atribuição:</strong> {atrib}</Typography>
-
-                        <Typography variant="h6" sx={{mt: 2, mb: 1}}>Endereço:</Typography>
-                        <Typography variant="body1"><strong>Logradouro:</strong> {endereco.logradouro}</Typography>
-                        <Typography variant="body1"><strong>Número:</strong> {endereco.numero}</Typography>
-                        <Typography variant="body1"><strong>Complemento:</strong> {endereco.complemento}</Typography>
-                        <Typography variant="body1"><strong>Bairro:</strong> {endereco.bairro}</Typography>
-                        <Typography variant="body1"><strong>CEP:</strong> {endereco.cep}</Typography>
-                        <Typography variant="body1"><strong>Cidade:</strong> {endereco.cidade.nomeCidade}</Typography>
-                        <Typography variant="body1"><strong>Estado:</strong> {endereco.cidade.estado.nomeEstado} - {endereco.cidade.estado.uf}</Typography>
-                    </Box>
-                );
-            default:
-                return null;
-        }
-    };
-
-    if (loading) {
-        return (
-            <Box sx={{display: 'flex'}}>
-                <Sidenav/>
-                <Box component="main" sx={{flexGrow: 1, p: 3}}>
-                    <Typography variant="h4">Carregando...</Typography>
-                </Box>
-            </Box>
-        );
-    }
-
     return (
-        <>
-            <Box sx={{display: 'flex'}}>
-                <Sidenav/>
-                <Box component="main" sx={{flexGrow: 1, p: 3}}>
-                    <Typography variant="h4">
-                        {isEditing ? 'Editar Funcionario' : 'Cadastrar Funcionario'}
-                    </Typography>
+        <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+            <Sidenav />
+            <Box sx={{ flexGrow: 1, p: 3 }}>
+                {/* Cabeçalho Principal */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 4,
+                    bgcolor: 'white',
+                    p: 3,
+                    borderRadius: 2,
+                    boxShadow: 1
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {isEditing ? <EditIcon sx={{ mr: 2, color: '#142442', fontSize: 32 }} /> :
+                            <PersonAddIcon sx={{ mr: 2, color: '#142442', fontSize: 32 }} />}
+                        <Box>
+                            <Typography variant="h4" sx={{ color: '#142442', fontWeight: 700, mb: 0.5 }}>
+                                {isEditing ? 'Editar Funcionário' : 'Novo Funcionário'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                {isEditing ? 'Atualize as informações do funcionário' : 'Cadastre um novo funcionário no sistema'}
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Chip
+                        icon={<WorkIcon />}
+                        label="FUNCIONÁRIOS"
+                        color="secondary"
+                        size="small"
+                        sx={{ fontWeight: 500 }}
+                    />
+                </Box>
 
-                    <Paper sx={{padding: 3, marginTop: 3}}>
-                        <Stepper activeStep={step} alternativeLabel>
-                            {steps.map((label) => (
-                                <Step key={label}>
-                                    <StepLabel>{label}</StepLabel>
-                                </Step>
-                            ))}
-                        </Stepper>
+                <form onSubmit={handleSubmit}>
+                    <Box sx={{ width: '100%',  display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {/* Informações Pessoais e Contato */}
+                        <Box sx={{
+                            p: 4,
+                            borderRadius: 3,
+                            boxShadow: 2,
+                            bgcolor: 'white',
+                            border: '1px solid #e0e0e0',
+                            '&:hover': { boxShadow: 4 },
+                            transition: 'all 0.3s ease'
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <PersonIcon sx={{ mr: 2, color: '#142442', fontSize: 28 }} />
+                                <Typography variant="h5" sx={{ color: '#142442', fontWeight: 600 }}>
+                                    Informações Pessoais
+                                </Typography>
+                            </Box>
+                            <Divider sx={{ mb: 4 }} />
 
-                        <Box sx={{marginTop: 3}}>
-                            {renderStepContent(step)}
+                            {/* Nome e Data de Nascimento */}
+                            <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '1 1 300px', minWidth: 250 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Nome Completo"
+                                        name="nomeCompleto"
+                                        value={nomeCompleto}
+                                        onChange={handleInputChange}
+                                        required
+                                        error={!!error && !nomeCompleto.trim()}
+                                        helperText={error && !nomeCompleto.trim() ? 'Nome é obrigatório' : 'Nome completo da pessoa'}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '0 1 200px', minWidth: 200 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data de Nascimento"
+                                        name="dataNascimento"
+                                        type="date"
+                                        value={dataNascimento}
+                                        onChange={handleInputChange}
+                                        required
+                                        error={!!error && !dataNascimento.trim()}
+                                        helperText={error && !dataNascimento.trim() ? 'Data é obrigatória' : 'Data de nascimento'}
+                                        InputLabelProps={{ shrink: true }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <CalendarTodayIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
 
-                            <Box sx={{display: 'flex', justifyContent: 'space-between', marginTop: 2}}>
-                                <Button
-                                    variant="outlined"
-                                    color="primary"
-                                    onClick={prevStep}
-                                    disabled={loading}
-                                    sx={{bgcolor:"#AEB8D6", color: '#142442', border:"none"}}
+                            {/* CPF e RG */}
+                            <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="CPF"
+                                        fullWidth
+                                        name="cpf"
+                                        value={cpfFunc}
+                                        onChange={handleCpfChange}
+                                        onBlur={handleCpfBlur}
+                                        required
+                                        error={!!cpfError}
+                                        helperText={cpfError || "Formatação automática"}
+                                        placeholder="000.000.000-00"
+                                        inputProps={{ maxLength: 14 }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <BadgeIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="RG"
+                                        fullWidth
+                                        name="rg"
+                                        value={rg}
+                                        onChange={handleInputChange}
+                                        required
+                                        placeholder="99.999.999-9"
+                                        helperText="Formatação automática"
+                                        inputProps={{ maxLength: 12 }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <BadgeIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
 
-                                >
-                                    {step === 0 ? 'Voltar' : 'Anterior'}
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={step === steps.length - 1 ? handleSubmit : nextStep}
-                                    disabled={loading}
-                                    sx={{bgcolor:"#AEB8D6", color: '#142442'}}
-                                >
-                                    {loading
-                                        ? 'Salvando...'
-                                        : step === steps.length - 1
-                                            ? (isEditing ? 'Atualizar' : 'Finalizar')
-                                            : 'Próximo'
-                                    }
-                                </Button>
+                            {/* Telefone e Email */}
+                            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="Telefone"
+                                        fullWidth
+                                        name="telefone"
+                                        value={telefone}
+                                        onChange={handleInputChange}
+                                        required
+                                        placeholder="(99) 99999-9999"
+                                        helperText="Formatação automática"
+                                        inputProps={{ maxLength: 15 }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <ContactPhoneIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="Email"
+                                        type="email"
+                                        fullWidth
+                                        name="email"
+                                        value={email}
+                                        onChange={handleInputChange}
+                                        placeholder="exemplo@email.com"
+                                        helperText="Email para contato (opcional)"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
                             </Box>
                         </Box>
-                    </Paper>
-                </Box>
-            </Box>
 
-            {/* Snackbar para mostrar as mensagens de sucesso ou erro */}
-            <Snackbar
-                open={openSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setOpenSnackbar(false)}
-            >
-                <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} sx={{width: '100%'}}>
-                    {snackbarMessage}
-                </Alert>
-            </Snackbar>
-        </>
+                        {/* Informações Profissionais */}
+                        <Box sx={{
+                            p: 4,
+                            borderRadius: 3,
+                            boxShadow: 2,
+                            bgcolor: 'white',
+                            border: '1px solid #e0e0e0',
+                            '&:hover': { boxShadow: 4 },
+                            transition: 'all 0.3s ease'
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <WorkIcon sx={{ mr: 2, color: '#142442', fontSize: 28 }} />
+                                <Typography variant="h5" sx={{ color: '#142442', fontWeight: 600 }}>
+                                    Informações Profissionais
+                                </Typography>
+                            </Box>
+                            <Divider sx={{ mb: 4 }} />
+
+                            <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
+                                {/* Autocomplete de Cargo */}
+                                <Box sx={{ flex: '1 1 300px', minWidth: 250 }}>
+                                    <Autocomplete
+                                        fullWidth
+                                        value={cargoSelecionado}
+                                        onChange={(event, newValue) => {
+                                            setCargoSelecionado(newValue);
+                                        }}
+                                        inputValue={inputValueCargo}
+                                        onInputChange={(event, newInputValue) => {
+                                            setInputValueCargo(newInputValue);
+                                        }}
+                                        options={cargosOptions}
+                                        getOptionLabel={(option) => option?.nomeCargo || ""}
+                                        isOptionEqualToValue={(option, value) => option?.idCargo === value?.idCargo}
+                                        noOptionsText="Digite para buscar cargos"
+                                        loading={loadingCargos}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Cargo"
+                                                required
+                                                variant="outlined"
+                                                helperText="Digite para buscar o cargo do funcionário"
+                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                                InputProps={{
+                                                    ...params.InputProps,
+                                                    startAdornment: <WorkIcon sx={{ mr: 1, color: 'action.active' }} />,
+                                                    endAdornment: (
+                                                        <>
+                                                            {loadingCargos ? <CircularProgress color="inherit" size={20} /> : null}
+                                                            {params.InputProps.endAdornment}
+                                                        </>
+                                                    ),
+                                                }}
+                                            />
+                                        )}
+                                        renderOption={(props, option) => (
+                                            <Box component="li" {...props}>
+                                                <Box>
+                                                    <Typography variant="body1">
+                                                        {option.nomeCargo}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Salário: {option.salarioBruto
+                                                        ? option.salarioBruto.toLocaleString('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
+                                                        })
+                                                        : 'Não informado'
+                                                    }
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        )}
+                                    />
+                                </Box>
+
+                                {/* Data de Admissão */}
+                                <Box sx={{ flex: '1 1 200px', minWidth: 200 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="Data de Admissão"
+                                        name="dataAdmissao"
+                                        type="date"
+                                        value={dataAdmissao}
+                                        onChange={(e) => setDataAdmissao(e.target.value)}
+                                        required
+                                        helperText="Data de entrada na empresa"
+                                        InputLabelProps={{ shrink: true }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                        InputProps={{
+                                            startAdornment: <CalendarTodayIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                        inputProps={{
+                                            max: new Date().toISOString().split('T')[0] // Não permite datas futuras
+                                        }}
+                                    />
+                                </Box>
+
+                                {/* Status Ativo/Inativo */}
+                                <Box sx={{flex: '0 1 200px', minWidth: 200}}>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Status"
+                                        name="status"
+                                        value={status}
+                                        onChange={handleInputChange}
+                                        required
+                                        helperText="Status do cargo no sistema"
+                                        sx={{'& .MuiOutlinedInput-root': {borderRadius: 2}}}
+                                    >
+                                        <MenuItem value="true">Ativo</MenuItem>
+                                        <MenuItem value="false">Inativo</MenuItem>
+                                    </TextField>
+                                </Box>                            </Box>
+                        </Box>
+
+                        {/* Endereço */}
+                        <Box sx={{
+                            p: 4,
+                            borderRadius: 3,
+                            boxShadow: 2,
+                            bgcolor: 'white',
+                            border: '1px solid #e0e0e0',
+                            '&:hover': { boxShadow: 4 },
+                            transition: 'all 0.3s ease'
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <LocationOnIcon sx={{ mr: 2, color: '#142442', fontSize: 28 }} />
+                                <Typography variant="h5" sx={{ color: '#142442', fontWeight: 600 }}>
+                                    Endereço Residencial
+                                </Typography>
+                            </Box>
+                            <Divider sx={{ mb: 4 }} />
+
+                            {/* CEP, Logradouro e Número */}
+                            <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '0 1 200px', minWidth: 150 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="CEP"
+                                        name="cep"
+                                        value={endereco.cep}
+                                        onChange={handleInputChange}
+                                        placeholder="00000-000"
+                                        inputProps={{ maxLength: 9 }}
+                                        helperText={carregandoCep ? 'Buscando endereço...' : 'Digite para busca automática'}
+                                        disabled={carregandoCep}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                ...(carregandoCep && { bgcolor: '#e3f2fd' })
+                                            }
+                                        }}
+                                        InputProps={{
+                                            startAdornment: carregandoCep ?
+                                                <CircularProgress size={20} sx={{ mr: 1 }} /> :
+                                                <SearchIcon sx={{ mr: 1, color: 'action.active' }} />
+                                        }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '1 1 300px', minWidth: 200 }}>
+                                    <TextField
+                                        label="Logradouro"
+                                        fullWidth
+                                        name="logradouro"
+                                        value={endereco.logradouro}
+                                        onChange={handleInputChange}
+                                        placeholder="Rua, Avenida, Estrada..."
+                                        helperText="Preenchimento automático via CEP"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '0 1 120px', minWidth: 80 }}>
+                                    <TextField
+                                        label="Número"
+                                        fullWidth
+                                        name="numero"
+                                        value={endereco.numero}
+                                        onChange={handleInputChange}
+                                        placeholder="123"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                            </Box>
+
+                            {/* Complemento e Bairro */}
+                            <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="Complemento"
+                                        fullWidth
+                                        name="complemento"
+                                        value={endereco.complemento}
+                                        onChange={handleInputChange}
+                                        placeholder="Apartamento, Bloco, Casa..."
+                                        helperText="Opcional"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '1 1 250px' }}>
+                                    <TextField
+                                        label="Bairro"
+                                        fullWidth
+                                        name="bairro"
+                                        value={endereco.bairro}
+                                        onChange={handleInputChange}
+                                        placeholder="Nome do bairro"
+                                        helperText="Preenchimento automático via CEP"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                            </Box>
+
+                            {/* Cidade, Estado e UF */}
+                            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                <Box sx={{ flex: '1 1 200px', minWidth: 150 }}>
+                                    <TextField
+                                        label="Cidade"
+                                        fullWidth
+                                        name="nomeCidade"
+                                        value={endereco.cidade.nomeCidade}
+                                        onChange={handleInputChange}
+                                        placeholder="Nome da cidade"
+                                        helperText="Preenchimento automático via CEP"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '1 1 200px', minWidth: 150 }}>
+                                    <TextField
+                                        label="Estado"
+                                        fullWidth
+                                        name="nomeEstado"
+                                        value={endereco.cidade.estado.nomeEstado}
+                                        onChange={handleInputChange}
+                                        placeholder="Nome do estado"
+                                        helperText="Preenchimento automático via CEP"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                                <Box sx={{ flex: '0 1 100px', minWidth: 80 }}>
+                                    <TextField
+                                        label="UF"
+                                        fullWidth
+                                        name="uf"
+                                        value={endereco.cidade.estado.uf}
+                                        onChange={handleInputChange}
+                                        placeholder="SP"
+                                        inputProps={{ maxLength: 2 }}
+                                        helperText="2 letras"
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+                            </Box>
+                        </Box>
+
+                        {/* Botões de Ação */}
+                        <Box sx={{
+                            p: 3,
+                            borderRadius: 3,
+                            bgcolor: '#fafafa',
+                            border: '1px solid #e0e0e0',
+                            boxShadow: 1
+                        }}>
+                            <Box sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 2,
+                                flexWrap: 'wrap'
+                            }}>
+                                <Button
+                                    startIcon={<ArrowBackIcon />}
+                                    variant="outlined"
+                                    onClick={() => navigate('/funcionarios')}
+                                    disabled={loading}
+                                    size="large"
+                                    sx={{
+                                        color: '#142442',
+                                        borderColor: '#142442',
+                                        borderWidth: 2,
+                                        px: 3,
+                                        py: 1.5,
+                                        fontWeight: 600,
+                                        '&:hover': {
+                                            bgcolor: '#142442',
+                                            color: 'white',
+                                            borderColor: '#142442'
+                                        }
+                                    }}
+                                >
+                                    Cancelar
+                                </Button>
+
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    {loading && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                                            <CircularProgress size={20} sx={{ mr: 1 }} />
+                                            <Typography variant="body2" color="text.secondary">
+                                                Salvando...
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    <Button
+                                        type="submit"
+                                        startIcon={loading ? null : <SaveIcon />}
+                                        variant="contained"
+                                        disabled={loading || !!cpfError}
+                                        size="large"
+                                        sx={{
+                                            bgcolor: '#142442',
+                                            color: 'white',
+                                            px: 4,
+                                            py: 1.5,
+                                            fontWeight: 600,
+                                            boxShadow: 3,
+                                            '&:hover': {
+                                                bgcolor: '#0f1c35',
+                                                boxShadow: 4
+                                            },
+                                            '&:disabled': {
+                                                bgcolor: '#ccc'
+                                            }
+                                        }}
+                                    >
+                                        {isEditing ? 'Salvar' : 'Salvar'}
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </Box>
+                </form>
+
+                {/* Snackbar para Mensagens */}
+                <Snackbar
+                    open={openSnackbar}
+                    autoHideDuration={2000}
+                    onClose={() => setOpenSnackbar(false)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert
+                        onClose={() => setOpenSnackbar(false)}
+                        severity={snackbarSeverity}
+                        sx={{
+                            width: '100%',
+                            boxShadow: 4,
+                            '& .MuiAlert-icon': {
+                                fontSize: '1.5rem'
+                            }
+                        }}
+                    >
+                        {snackbarMessage}
+                    </Alert>
+                </Snackbar>
+            </Box>
+        </Box>
     );
 };
 

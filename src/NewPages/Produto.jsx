@@ -1,81 +1,249 @@
-import React, {useState, useEffect} from 'react';
-import {Box, Paper, TextField, Typography, Button, Snackbar, Alert, Autocomplete, MenuItem} from '@mui/material';
-import {useNavigate, useParams, useLocation} from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import {
+    Box, Paper, TextField, Typography, Button, Snackbar, Alert,
+    Autocomplete, IconButton, Card, CardContent, Divider, Chip
+} from '@mui/material';
+import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CopyIcon } from '@mui/icons-material';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidenav from "../NSidenav";
 import axios from "axios";
 
-const ProdutoForm = ({onProdutoAdded}) => {
+const ProdutoForm = ({ onProdutoAdded }) => {
     const navigate = useNavigate();
-    const {id} = useParams();
+    const { id } = useParams();
     const location = useLocation();
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState(!!id);
 
-    // Estados do formulário de produto
-    const [nome, setNome] = useState('');
-    const [codigo, setCodigo] = useState('');
-    const [precoCusto, setPrecoCusto] = useState('');
-    const [precoVenda, setPrecoVenda] = useState('');
-    const [estoque, setEstoque] = useState('');
-    const [tamanho, setTamanho] = useState('');
-    const [tipoRoupa, setTipoRoupa] = useState('');
-
-    // Estados para o Autocomplete de Produtos
-    const [buscaProduto, setBuscaProduto] = useState('');
-    const [produtosLike, setProdutosLike] = useState([]);
-    const [produtoSelecionado, setProdutoSelecionado] = useState(null);
-
-    // Estados para o Autocomplete de Marcas
-    const [buscaMarca, setBuscaMarca] = useState('');
-    const [marcasLike, setMarcasLike] = useState([]);
+    // Estados do formulário de produto (PAI)
+    const [nomeProduto, setNomeProduto] = useState('');
     const [marcaSelecionada, setMarcaSelecionada] = useState(null);
 
+    // Estados para derivações (FILHOS - variações)
+    const [derivacoes, setDerivacoes] = useState([{
+        codigoSKU: '',
+        codigoVenda: '',
+        precoCusto: '0',
+        precoVenda: '0',
+        margemVenda: '0',
+        estoque: '0',
+        tipoRoupa: { tipoRoupa: '' },
+        tipoCor: { nomeCor: '' },
+        tamanho: { nomeTamanho: '' }
+    }]);
+
+    // Estados para Autocompletes
+    const [buscaMarca, setBuscaMarca] = useState('');
+    const [marcasLike, setMarcasLike] = useState([]);
+    const [tiposRoupa, setTiposRoupa] = useState([]);
+    const [cores, setCores] = useState([]);
+    const [tamanhos, setTamanhos] = useState([]);
+
+    // Estados para busca nos Autocompletes de derivações
+    const [buscaTipoRoupa, setBuscaTipoRoupa] = useState({});
+    const [buscaCor, setBuscaCor] = useState({});
+    const [buscaTamanho, setBuscaTamanho] = useState({});
+
+    // Estados de controle
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Verificar se está editando quando o componente monta
+    // FUNÇÕES CORRIGIDAS COM CACHE PARA EVITAR DUPLICAÇÃO
+
+    // Função para criar marca se não existir
+    const criarMarcaSeNaoExiste = async (nomeMarca, cacheEntidades) => {
+        const chaveCache = `marca_${nomeMarca.toLowerCase()}`;
+
+        // Verifica se já criou nesta operação
+        if (cacheEntidades[chaveCache]) {
+            return cacheEntidades[chaveCache];
+        }
+
+        try {
+            // Primeiro verifica se existe no banco
+            const response = await axios.get(`http://localhost:8080/marca/likemarca/${nomeMarca}`);
+            const marcaExistente = response.data.find(m => m.marca.toLowerCase() === nomeMarca.toLowerCase());
+
+            if (marcaExistente) {
+                cacheEntidades[chaveCache] = marcaExistente;
+                return marcaExistente;
+            }
+
+            // Se não existe, cria uma nova
+            const novaMarca = await axios.post('http://localhost:8080/marca', {
+                marca: nomeMarca.trim()
+            });
+
+            cacheEntidades[chaveCache] = novaMarca.data;
+            return novaMarca.data;
+        } catch (error) {
+            console.error('Erro ao criar/buscar marca:', error);
+            throw error;
+        }
+    };
+
+    // Função para criar tipo de roupa se não existir
+    const criarTipoRoupaSeNaoExiste = async (nomeTipo, cacheEntidades) => {
+        const chaveCache = `tipo_${nomeTipo.toLowerCase()}`;
+
+        // Verifica se já criou nesta operação
+        if (cacheEntidades[chaveCache]) {
+            return cacheEntidades[chaveCache];
+        }
+
+        try {
+            // Verifica nas listas atualizadas (incluindo itens já criados nesta operação)
+            const tiposAtualizados = [...tiposRoupa, ...Object.values(cacheEntidades).filter(item => item.tipoRoupa)];
+            const tipoExistente = tiposAtualizados.find(t => t.tipoRoupa && t.tipoRoupa.toLowerCase() === nomeTipo.toLowerCase());
+
+            if (tipoExistente) {
+                cacheEntidades[chaveCache] = tipoExistente;
+                return tipoExistente;
+            }
+
+            // Se não existe, cria um novo
+            const novoTipo = await axios.post('http://localhost:8080/tiporoupa', {
+                tipoRoupa: nomeTipo.trim()
+            });
+
+            // Atualiza cache e lista local
+            cacheEntidades[chaveCache] = novoTipo.data;
+            setTiposRoupa(prev => [...prev, novoTipo.data]);
+            return novoTipo.data;
+        } catch (error) {
+            console.error('Erro ao criar/buscar tipo de roupa:', error);
+            throw error;
+        }
+    };
+
+    // Função para criar cor se não existir
+    const criarCorSeNaoExiste = async (nomeCor, cacheEntidades) => {
+        const chaveCache = `cor_${nomeCor.toLowerCase()}`;
+
+        // Verifica se já criou nesta operação
+        if (cacheEntidades[chaveCache]) {
+            return cacheEntidades[chaveCache];
+        }
+
+        try {
+            // Verifica nas listas atualizadas
+            const coresAtualizadas = [...cores, ...Object.values(cacheEntidades).filter(item => item.nomeCor)];
+            const corExistente = coresAtualizadas.find(c => c.nomeCor && c.nomeCor.toLowerCase() === nomeCor.toLowerCase());
+
+            if (corExistente) {
+                cacheEntidades[chaveCache] = corExistente;
+                return corExistente;
+            }
+
+            // Se não existe, cria uma nova
+            const novaCor = await axios.post('http://localhost:8080/tipocor', {
+                nomeCor: nomeCor.trim()
+            });
+
+            // Atualiza cache e lista local
+            cacheEntidades[chaveCache] = novaCor.data;
+            setCores(prev => [...prev, novaCor.data]);
+            return novaCor.data;
+        } catch (error) {
+            console.error('Erro ao criar/buscar cor:', error);
+            throw error;
+        }
+    };
+
+    // Função para criar tamanho se não existir
+    const criarTamanhoSeNaoExiste = async (nomeTamanho, cacheEntidades) => {
+        const chaveCache = `tamanho_${nomeTamanho.toLowerCase()}`;
+
+        // Verifica se já criou nesta operação
+        if (cacheEntidades[chaveCache]) {
+            return cacheEntidades[chaveCache];
+        }
+
+        try {
+            // Verifica nas listas atualizadas
+            const tamanhosAtualizados = [...tamanhos, ...Object.values(cacheEntidades).filter(item => item.nomeTamanho)];
+            const tamanhoExistente = tamanhosAtualizados.find(t => t.nomeTamanho && t.nomeTamanho.toLowerCase() === nomeTamanho.toLowerCase());
+
+            if (tamanhoExistente) {
+                cacheEntidades[chaveCache] = tamanhoExistente;
+                return tamanhoExistente;
+            }
+
+            // Se não existe, cria um novo
+            const novoTamanho = await axios.post('http://localhost:8080/tamanho', {
+                nomeTamanho: nomeTamanho.trim()
+            });
+
+            // Atualiza cache e lista local
+            cacheEntidades[chaveCache] = novoTamanho.data;
+            setTamanhos(prev => [...prev, novoTamanho.data]);
+            return novoTamanho.data;
+        } catch (error) {
+            console.error('Erro ao criar/buscar tamanho:', error);
+            throw error;
+        }
+    };
+
+    // Carregar opções para selects
     useEffect(() => {
-        const fetchProdutoById = async (idProduto) => {
-            setLoading(true);
+        const carregarOpcoes = async () => {
             try {
-                const response = await axios.get(`http://localhost:8080/produto/${idProduto}`);
-                preencherFormulario(response.data);
+                const [roupaRes, corRes, tamanhoRes] = await Promise.all([
+                    axios.get('http://localhost:8080/tiporoupa'),
+                    axios.get('http://localhost:8080/tipocor'),
+                    axios.get('http://localhost:8080/tamanho')
+                ]);
+                setTiposRoupa(roupaRes.data);
+                setCores(corRes.data);
+                setTamanhos(tamanhoRes.data);
             } catch (error) {
-                console.error('Erro ao buscar produto:', error);
-                setError('Erro ao carregar dados do produto');
-                setSnackbarSeverity('error');
-                setSnackbarMessage('Erro ao carregar dados do produto');
-                setOpenSnackbar(true);
-            } finally {
-                setLoading(false);
+                console.error('Erro ao carregar opções:', error);
+                setError('Erro ao carregar opções do formulário');
             }
         };
+        carregarOpcoes();
+    }, []);
 
-        if (id) {
-            setIsEditing(true);
-            fetchProdutoById(id);
-        } else if (location.state?.produto) {
-            setIsEditing(true);
-            preencherFormulario(location.state.produto);
-        }
-    }, [id, location.state]);
-
-    // Buscar produtos para o Autocomplete
+    // Carregar dados do produto para edição
     useEffect(() => {
-        const delay = setTimeout(() => {
-            if (buscaProduto && buscaProduto.length >= 2) {
-                axios.get(`http://localhost:8080/produto/likeproduto/${buscaProduto}`)
-                    .then((response) => setProdutosLike(response.data))
-                    .catch((error) => console.error("Erro ao buscar produtos:", error));
-            } else {
-                setProdutosLike([]);
-            }
-        }, 500);
+        if (isEditing && id) {
+            const carregarProduto = async () => {
+                try {
+                    setLoading(true);
+                    const response = await axios.get(`http://localhost:8080/produto/${id}`);
+                    const produto = response.data;
 
-        return () => clearTimeout(delay);
-    }, [buscaProduto]);
+                    setNomeProduto(produto.nomeProduto);
+                    setMarcaSelecionada(produto.marca);
+
+                    if (produto.derivacoes && produto.derivacoes.length > 0) {
+                        setDerivacoes(produto.derivacoes.map(d => ({
+                            codigoSKU: d.codigoSKU || '',
+                            codigoVenda: d.codigoVenda || '',
+                            precoCusto: d.precoCusto?.toString() || '',
+                            precoVenda: d.precoVenda?.toString() || '',
+                            margemVenda: d.margemVenda?.toString() || '',
+                            estoque: d.estoque?.toString() || '',
+                            tipoRoupa: d.tipoRoupa || { tipoRoupa: '' },
+                            tipoCor: d.tipoCor || { nomeCor: '' },
+                            tamanho: d.tamanho || { nomeTamanho: '' }
+                        })));
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar produto:', error);
+                    setError('Erro ao carregar dados do produto');
+                    setSnackbarMessage('Erro ao carregar produto');
+                    setSnackbarSeverity('error');
+                    setOpenSnackbar(true);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            carregarProduto();
+        }
+    }, [isEditing, id]);
 
     // Buscar marcas para o Autocomplete
     useEffect(() => {
@@ -88,98 +256,227 @@ const ProdutoForm = ({onProdutoAdded}) => {
                 setMarcasLike([]);
             }
         }, 500);
-
         return () => clearTimeout(delay);
     }, [buscaMarca]);
 
-    const preencherFormulario = (produtoData) => {
-        setNome(produtoData.nome || '');
-        setCodigo(produtoData.codigo || '');
-        setPrecoCusto(produtoData.precoCusto || '');
-        setPrecoVenda(produtoData.precoVenda || '');
-        setEstoque(produtoData.estoque || '');
-        setTamanho(produtoData.tamanho || '');
-        setTipoRoupa(produtoData.tipoRoupa || '');
-        setProdutoSelecionado(produtoData);
-        setBuscaProduto(produtoData.nome || '');
+    // Funções para filtrar opções dos Autocompletes
+    const filtrarTiposRoupa = (index) => {
+        const busca = buscaTipoRoupa[index] || '';
+        if (!busca) return tiposRoupa;
+        return tiposRoupa.filter(tipo =>
+            tipo.tipoRoupa.toLowerCase().includes(busca.toLowerCase())
+        );
+    };
 
-        // Se o produto tem marca associada
-        if (produtoData.marca) {
-            setMarcaSelecionada(produtoData.marca);
-            setBuscaMarca(produtoData.marca.marca || produtoData.marca.nome || '');
+    const filtrarCores = (index) => {
+        const busca = buscaCor[index] || '';
+        if (!busca) return cores;
+        return cores.filter(cor =>
+            cor.nomeCor.toLowerCase().includes(busca.toLowerCase())
+        );
+    };
+
+    const filtrarTamanhos = (index) => {
+        const busca = buscaTamanho[index] || '';
+        if (!busca) return tamanhos;
+        return tamanhos.filter(tamanho =>
+            tamanho.nomeTamanho.toLowerCase().includes(busca.toLowerCase())
+        );
+    };
+
+    // Função para calcular preço de venda baseado no custo e margem
+    const calcularPrecoVenda = (custo, margem) => {
+        if (!custo || !margem) return '';
+        const custoNum = parseFloat(custo);
+        const margemNum = parseFloat(margem);
+        if (custoNum <= 0 || margemNum < 0) return '';
+        const precoCalculado = custoNum + margemNum;
+        return precoCalculado.toFixed(2);
+    };
+
+    // Adicionar nova derivação
+    const adicionarDerivacao = () => {
+        setDerivacoes([
+            ...derivacoes,
+            {
+                codigoSKU: '',
+                codigoVenda: '',
+                precoCusto: '0',
+                precoVenda: '0',
+                margemVenda: '0',
+                estoque: '0',
+                tipoRoupa: { tipoRoupa: '' },
+                tipoCor: { nomeCor: '' },
+                tamanho: { nomeTamanho: '' }
+            }
+        ]);
+    };
+
+
+    // Remover derivação
+    const removerDerivacao = (index) => {
+        if (derivacoes.length > 1) {
+            const novasDerivacoes = derivacoes.filter((_, i) => i !== index);
+            setDerivacoes(novasDerivacoes);
         }
     };
 
+    // Duplicar derivação
+    const duplicarDerivacao = (index) => {
+        const derivacaoOriginal = { ...derivacoes[index] };
+        derivacaoOriginal.codigoSKU = '';
+        derivacaoOriginal.codigoVenda = '';
+        setDerivacoes([...derivacoes, derivacaoOriginal]);
+    };
+
+    // Atualizar derivação específica
+    const atualizarDerivacao = (index, campo, valor) => {
+        const novasDerivacoes = [...derivacoes];
+
+        if (campo.includes('.')) {
+            const [objeto, propriedade] = campo.split('.');
+            novasDerivacoes[index][objeto][propriedade] = valor;
+        } else {
+            novasDerivacoes[index][campo] = valor;
+        }
+
+        // Recalcular preço de venda se mudou custo ou margem
+        if (campo === 'precoCusto' || campo === 'margemVenda') {
+            const custo = campo === 'precoCusto' ? valor : novasDerivacoes[index].precoCusto;
+            const margem = campo === 'margemVenda' ? valor : novasDerivacoes[index].margemVenda;
+            novasDerivacoes[index].precoVenda = calcularPrecoVenda(custo, margem);
+        }
+
+        setDerivacoes(novasDerivacoes);
+    };
+
+    // Validar formulário
     const validarFormulario = () => {
-        if (!nome.trim()) {
-            setError('Nome é obrigatório');
+        if (!nomeProduto.trim()) {
+            setError('Nome do produto é obrigatório');
             return false;
         }
-        if (!codigo.trim()) {
-            setError('Código é obrigatório');
+
+        if (!marcaSelecionada && !buscaMarca.trim()) {
+            setError('Marca é obrigatória');
             return false;
         }
-        if (!precoCusto || parseFloat(precoCusto) <= 0) {
-            setError('Preço de custo é obrigatório e deve ser maior que zero');
-            return false;
+
+        for (let i = 0; i < derivacoes.length; i++) {
+            const derivacao = derivacoes[i];
+
+            if (!derivacao.tipoRoupa.tipoRoupa && !buscaTipoRoupa[i]) {
+                setError(`Tipo de roupa é obrigatório na variação ${i + 1}`);
+                return false;
+            }
+
+            if (!derivacao.tipoCor.nomeCor && !buscaCor[i]) {
+                setError(`Cor é obrigatória na variação ${i + 1}`);
+                return false;
+            }
+
+            if (!derivacao.tamanho.nomeTamanho && !buscaTamanho[i]) {
+                setError(`Tamanho é obrigatório na variação ${i + 1}`);
+                return false;
+            }
+
+
         }
-        if (!precoVenda || parseFloat(precoVenda) <= 0) {
-            setError('Preço de venda é obrigatório e deve ser maior que zero');
-            return false;
-        }
-        if (!estoque || parseInt(estoque) < 0) {
-            setError('Estoque é obrigatório e deve ser maior ou igual a zero');
-            return false;
-        }
-        if (!tamanho.trim()) {
-            setError('Tamanho é obrigatório');
-            return false;
-        }
-        if (!tipoRoupa.trim()) {
-            setError('Tipo de roupa é obrigatório');
-            return false;
-        }
-        if (nome.trim().length < 2) {
-            setError('Nome deve ter pelo menos 2 caracteres');
-            return false;
-        }
+
         setError('');
         return true;
     };
 
-    // Submeter formulário
+    // Submeter formulário - VERSÃO CORRIGIDA COM CACHE
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!validarFormulario()) {
             return;
         }
 
         setLoading(true);
 
-        const produtoData = {
-            nome: nome.trim(),
-            codigo: codigo.trim(),
-            precoCusto: parseFloat(precoCusto),
-            precoVenda: parseFloat(precoVenda),
-            estoque: parseInt(estoque),
-            tamanho: tamanho.trim(),
-            tipoRoupa: tipoRoupa.trim(),
-            // CORREÇÃO: usar idMarca em vez de id
-            marca: marcaSelecionada ? { idMarca: marcaSelecionada.idMarca } : null
-        };
-
         try {
+            // CACHE para evitar criar entidades duplicadas na mesma operação
+            const cacheEntidades = {};
+
+            // 1. Primeiro, garantir que a marca existe
+            let marcaFinal = marcaSelecionada;
+            if (!marcaFinal && buscaMarca.trim()) {
+                marcaFinal = await criarMarcaSeNaoExiste(buscaMarca.trim(), cacheEntidades);
+            }
+
+            // 2. Processar todas as derivações e garantir que os tipos existem
+            const derivacoesProcessadas = [];
+
+            for (let i = 0; i < derivacoes.length; i++) {
+                const derivacao = derivacoes[i];
+
+                // Garantir que o tipo de roupa existe
+                let tipoRoupaFinal = null;
+                if (derivacao.tipoRoupa.tipoRoupa) {
+                    tipoRoupaFinal = derivacao.tipoRoupa;
+                } else if (buscaTipoRoupa[i]) {
+                    tipoRoupaFinal = await criarTipoRoupaSeNaoExiste(buscaTipoRoupa[i], cacheEntidades);
+                }
+
+                // Garantir que a cor existe
+                let corFinal = null;
+                if (derivacao.tipoCor.nomeCor) {
+                    corFinal = derivacao.tipoCor;
+                } else if (buscaCor[i]) {
+                    corFinal = await criarCorSeNaoExiste(buscaCor[i], cacheEntidades);
+                }
+
+                // Garantir que o tamanho existe
+                let tamanhoFinal = null;
+                if (derivacao.tamanho.nomeTamanho) {
+                    tamanhoFinal = derivacao.tamanho;
+                } else if (buscaTamanho[i]) {
+                    tamanhoFinal = await criarTamanhoSeNaoExiste(buscaTamanho[i], cacheEntidades);
+                }
+
+                // Montar derivação processada
+                derivacoesProcessadas.push({
+                    codigoSKU: derivacao.codigoSKU.trim() || undefined,
+                    codigoVenda: derivacao.codigoVenda.trim(),
+                    precoCusto: parseFloat(derivacao.precoCusto),
+                    precoVenda: parseFloat(derivacao.precoVenda),
+                    margemVenda: parseFloat(derivacao.margemVenda || 0),
+                    estoque: parseInt(derivacao.estoque),
+                    tipoRoupa: {
+                        tipoRoupa: tipoRoupaFinal.tipoRoupa
+                    },
+                    tipoCor: {
+                        nomeCor: corFinal.nomeCor
+                    },
+                    tamanho: {
+                        nomeTamanho: tamanhoFinal.nomeTamanho
+                    }
+                });
+            }
+
+            // 3. Montar dados do produto
+            const produtoData = {
+                nomeProduto: nomeProduto.trim(),
+                marca: {
+                    marca: marcaFinal.marca
+                },
+                derivacoes: derivacoesProcessadas
+            };
+
+            console.log('Dados sendo enviados:', JSON.stringify(produtoData, null, 2));
+
+            // 4. Salvar produto
             if (isEditing) {
                 await axios.put(`http://localhost:8080/produto/${id}`, produtoData);
-                setSnackbarSeverity('success');
                 setSnackbarMessage('Produto atualizado com sucesso');
             } else {
                 await axios.post("http://localhost:8080/produto", produtoData);
-                setSnackbarSeverity('success');
                 setSnackbarMessage('Produto cadastrado com sucesso');
             }
 
+            setSnackbarSeverity('success');
             setOpenSnackbar(true);
 
             if (onProdutoAdded) {
@@ -188,251 +485,324 @@ const ProdutoForm = ({onProdutoAdded}) => {
 
             setTimeout(() => {
                 navigate('/estoque');
-            }, 500);
+            }, 2000);
 
         } catch (error) {
             console.error("Erro ao salvar produto:", error);
             setSnackbarSeverity('error');
-            setSnackbarMessage(isEditing ? 'Erro ao atualizar produto' : 'Erro ao cadastrar produto');
+            setSnackbarMessage(
+                error.response?.data?.message ||
+                (isEditing ? 'Erro ao atualizar produto' : 'Erro ao cadastrar produto')
+            );
             setOpenSnackbar(true);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCancel = () => {
-        navigate('/estoque');
-    };
-
-    // Renderizar conteúdo do formulário
-    const renderFormContent = () => (
-        <Paper sx={{p: 3, mb: 2}}>
-            <form onSubmit={handleSubmit}>
-                <Box sx={{mb: 3}}>
-
+    // Renderizar formulário de derivação
+    const renderDerivacao = (derivacao, index) => (
+        <Card key={index} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
+            <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                        Variação {index + 1}
+                        {derivacao.codigoSKU && (
+                            <Chip
+                                label={`SKU: ${derivacao.codigoSKU}`}
+                                size="small"
+                                sx={{ ml: 1 }}
+                            />
+                        )}
+                    </Typography>
+                    <Box>
+                        <IconButton onClick={() => duplicarDerivacao(index)} size="small" title="Duplicar">
+                            <CopyIcon />
+                        </IconButton>
+                        {derivacoes.length > 1 && (
+                            <IconButton onClick={() => removerDerivacao(index)} size="small" color="error" title="Remover">
+                                <DeleteIcon />
+                            </IconButton>
+                        )}
+                    </Box>
                 </Box>
 
-                {/* Nome */}
-                <Box sx={{mb: 2}}>
-                    <TextField
+                {/* Primeira linha: Tipo, Cor, Tamanho */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <Autocomplete
                         fullWidth
-                        label="Nome"
-                        value={nome}
-                        onChange={(e) => setNome(e.target.value)}
-                        required
-                        error={!!error && !nome.trim()}
-                        helperText={error && !nome.trim() ? 'Nome é obrigatório' : ''}
+                        value={tiposRoupa.find(tipo => tipo.tipoRoupa === derivacao.tipoRoupa.tipoRoupa) || null}
+                        onChange={(event, newValue) => {
+                            atualizarDerivacao(index, 'tipoRoupa.tipoRoupa', newValue ? newValue.tipoRoupa : '');
+                        }}
+                        inputValue={buscaTipoRoupa[index] || ''}
+                        onInputChange={(event, newInputValue) => {
+                            setBuscaTipoRoupa(prev => ({
+                                ...prev,
+                                [index]: newInputValue
+                            }));
+                        }}
+                        options={filtrarTiposRoupa(index)}
+                        getOptionLabel={(option) => option?.tipoRoupa || ""}
+                        isOptionEqualToValue={(option, value) => option?.idTipoRoupa === value?.idTipoRoupa}
+                        noOptionsText="Digite para criar novo tipo"
+                        freeSolo
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Tipo de Roupa"
+                                required
+                                variant="outlined"
+                                margin="normal"
+                                helperText="Digite para buscar ou criar novo"
+                            />
+                        )}
+                    />
+
+                    <Autocomplete
+                        fullWidth
+                        value={cores.find(cor => cor.nomeCor === derivacao.tipoCor.nomeCor) || null}
+                        onChange={(event, newValue) => {
+                            atualizarDerivacao(index, 'tipoCor.nomeCor', newValue ? newValue.nomeCor : '');
+                        }}
+                        inputValue={buscaCor[index] || ''}
+                        onInputChange={(event, newInputValue) => {
+                            setBuscaCor(prev => ({
+                                ...prev,
+                                [index]: newInputValue
+                            }));
+                        }}
+                        options={filtrarCores(index)}
+                        getOptionLabel={(option) => option?.nomeCor || ""}
+                        isOptionEqualToValue={(option, value) => option?.idTipoCor === value?.idTipoCor}
+                        noOptionsText="Digite para criar nova cor"
+                        freeSolo
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Cor"
+                                required
+                                variant="outlined"
+                                margin="normal"
+                                helperText="Digite para buscar ou criar nova"
+                            />
+                        )}
+                    />
+
+                    <Autocomplete
+                        fullWidth
+                        value={tamanhos.find(tamanho => tamanho.nomeTamanho === derivacao.tamanho.nomeTamanho) || null}
+                        onChange={(event, newValue) => {
+                            atualizarDerivacao(index, 'tamanho.nomeTamanho', newValue ? newValue.nomeTamanho : '');
+                        }}
+                        inputValue={buscaTamanho[index] || ''}
+                        onInputChange={(event, newInputValue) => {
+                            setBuscaTamanho(prev => ({
+                                ...prev,
+                                [index]: newInputValue
+                            }));
+                        }}
+                        options={filtrarTamanhos(index)}
+                        getOptionLabel={(option) => option?.nomeTamanho || ""}
+                        isOptionEqualToValue={(option, value) => option?.idTamanho === value?.idTamanho}
+                        noOptionsText="Digite para criar novo tamanho"
+                        freeSolo
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Tamanho"
+                                required
+                                variant="outlined"
+                                margin="normal"
+                                helperText="Digite para buscar ou criar novo"
+                            />
+                        )}
                     />
                 </Box>
 
-                {/* Código */}
-                <Box sx={{mb: 2}}>
+                {/* Segunda linha: SKU e Código de Venda */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                     <TextField
                         fullWidth
-                        label="Código"
-                        value={codigo}
-                        onChange={(e) => setCodigo(e.target.value)}
-                        required
-                        error={!!error && !codigo.trim()}
-                        helperText={error && !codigo.trim() ? 'Código é obrigatório' : 'Código único do produto'}
+                        label="SKU"
+                        value={derivacao.codigoSKU}
+                        onChange={(e) => atualizarDerivacao(index, 'codigoSKU', e.target.value)}
+                        helperText="Deixe vazio para gerar automaticamente"
+                        variant="outlined"
+                        margin="normal"
+                    />
+
+                    <TextField
+                        fullWidth
+                        label="Código de Venda"
+                        value={derivacao.codigoVenda}
+                        onChange={(e) => atualizarDerivacao(index, 'codigoVenda', e.target.value)}
+                        variant="outlined"
+                        margin="normal"
                     />
                 </Box>
 
-                {/* Preços */}
-                <Box sx={{display: 'flex', gap: 2, mb: 2}}>
+                {/* Terceira linha: Preços e Estoque */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
                     <TextField
-                        fullWidth
-                        label="Preço de Custo"
+                        label="Custo R$"
                         type="number"
-                        value={precoCusto}
-                        onChange={(e) => setPrecoCusto(e.target.value)}
+                        value={derivacao.precoCusto}
+                        InputProps={{ readOnly: true }}
                         required
-                        inputProps={{ step: "0.01", min: "0" }}
-                        error={!!error && (!precoCusto || parseFloat(precoCusto) <= 0)}
-                        helperText="R$ 0,00"
+                        variant="outlined"
+                        margin="normal"
+                        sx={{ width: '25%' }}
                     />
                     <TextField
-                        fullWidth
-                        label="Preço de Venda"
+                        label="Margem %"
                         type="number"
-                        value={precoVenda}
-                        onChange={(e) => setPrecoVenda(e.target.value)}
-                        required
-                        inputProps={{ step: "0.01", min: "0" }}
-                        error={!!error && (!precoVenda || parseFloat(precoVenda) <= 0)}
-                        helperText="R$ 0,00"
+                        value={derivacao.margemVenda}
+                        InputProps={{ readOnly: true }}
+                        variant="outlined"
+                        margin="normal"
+                        sx={{ width: '25%' }}
                     />
-                </Box>
-
-                {/* Estoque e Tamanho */}
-                <Box sx={{display: 'flex', gap: 2, mb: 2}}>
                     <TextField
-                        fullWidth
+                        label="Venda R$"
+                        type="number"
+                        value={derivacao.precoVenda}
+                        InputProps={{ readOnly: true }}
+                        required
+                        variant="outlined"
+                        margin="normal"
+                        sx={{ width: '25%' }}
+                    />
+                    <TextField
                         label="Estoque"
                         type="number"
-                        value={estoque}
-                        onChange={(e) => setEstoque(e.target.value)}
+                        value={derivacao.estoque}
+                        InputProps={{ readOnly: true }}
                         required
-                        inputProps={{ min: "0" }}
-                        error={!!error && (!estoque || parseInt(estoque) < 0)}
-                        helperText="Quantidade em estoque"
+                        variant="outlined"
+                        margin="normal"
+                        sx={{ width: '25%' }}
                     />
+
+                </Box>
+            </CardContent>
+        </Card>
+    );
+
+    const renderFormConteudo = () => (
+        <Paper sx={{ p: 3, mb: 2 }}>
+            <form onSubmit={handleSubmit}>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                {/* Seção do Produto */}
+                <Box sx={{ mb: 3 }}>
                     <TextField
                         fullWidth
-                        label="Tamanho"
-                        value={tamanho}
-                        onChange={(e) => setTamanho(e.target.value)}
+                        label="Nome do Produto"
+                        value={nomeProduto}
+                        onChange={(e) => setNomeProduto(e.target.value)}
                         required
-                        error={!!error && !tamanho.trim()}
-                        helperText="P, M, G, GG, etc."
+                        helperText="Ex: Camiseta Básica, Polo Premium"
+                        variant="outlined"
+                        margin="normal"
                     />
                 </Box>
 
-                {/* Tipo de Roupa */}
-                <Box sx={{mb: 2}}>
-                    <TextField
-                        select
-                        fullWidth
-                        label="Tipo de Roupa"
-                        value={tipoRoupa}
-                        onChange={(e) => setTipoRoupa(e.target.value)}
-                        required
-                        error={!!error && !tipoRoupa.trim()}
-                    >
-                        <MenuItem value="TIPO_CAMISETA">Camiseta</MenuItem>
-                        <MenuItem value="TIPO_CALCA">Calça</MenuItem>
-                        <MenuItem value="TIPO_VESTIDO">Vestido</MenuItem>
-                        <MenuItem value="TIPO_MOLETOM">Blusa</MenuItem>
-                        <MenuItem value="SAIA">Saia</MenuItem>
-                        <MenuItem value="SHORTS">Shorts</MenuItem>
-                        <MenuItem value="JAQUETA">Jaqueta</MenuItem>
-                        <MenuItem value="OUTROS">Outros</MenuItem>
-                    </TextField>
-                </Box>
-
-                {/* Autocomplete para marca */}
-                <Box sx={{mb: 2}}>
+                <Box sx={{ mb: 3 }}>
                     <Autocomplete
                         value={marcaSelecionada}
-                        onChange={(event, newValue) => {
-                            setMarcaSelecionada(newValue);
-                        }}
+                        onChange={(event, newValue) => setMarcaSelecionada(newValue)}
                         inputValue={buscaMarca}
                         onInputChange={(event, newInputValue) => {
                             setBuscaMarca(newInputValue);
-                            if (!newInputValue) {
-                                setMarcaSelecionada(null);
-                            }
+                            if (!newInputValue) setMarcaSelecionada(null);
                         }}
                         options={marcasLike}
-                        noOptionsText="Nenhuma marca encontrada"
-                        getOptionLabel={(option) => option?.marca || option?.nome || ""}
-                        // CORREÇÃO: usar idMarca para comparação
+                        noOptionsText="Digite para criar nova marca"
+                        getOptionLabel={(option) => option?.marca || ""}
                         isOptionEqualToValue={(option, value) => option?.idMarca === value?.idMarca}
+                        freeSolo
                         renderInput={(params) => (
                             <TextField
                                 {...params}
                                 label="Marca"
-                                placeholder="Digite pelo menos 2 caracteres"
-                                helperText="Selecione a marca do produto"
+                                required
+                                helperText="Digite para buscar ou criar nova marca"
                                 variant="outlined"
-                                fullWidth
+                                margin="normal"
                             />
-                        )}
-                        renderOption={(props, option) => (
-                            // CORREÇÃO: usar idMarca como key
-                            <li {...props} key={option?.idMarca}>
-                                <Box>
-                                    <Typography variant="body1">{option?.marca || option?.nome}</Typography>
-                                    {option?.desMarca && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            {option.desMarca}
-                                        </Typography>
-                                    )}
-                                    <Typography variant="caption" color="text.secondary">
-                                        Status: {option?.status || 'N/A'}
-                                    </Typography>
-                                </Box>
-                            </li>
                         )}
                     />
                 </Box>
 
-                {/* Botões */}
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between' }}>
+                <Divider sx={{ my: 3 }} />
+
+                {/* Seção de Variações */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                        Variações ({derivacoes.length})
+                    </Typography>
                     <Button
-                        type="button"
-                        variant="outlined"
-                        color="secondary"
-                        onClick={handleCancel}
-                        disabled={loading}
-                        sx={{
-                            bgcolor: "#AEB8D6",
-                            color: '#142442',
-                            border: "none",
-                            minWidth: '120px'
-                        }}
+                        startIcon={<AddIcon />}
+                        onClick={adicionarDerivacao}
+                        variant="contained"
+                        sx={{ bgcolor: "#AEB8D6", color: '#142442' }}
                     >
-                        Cancelar
+                        Adicionar Variação
+                    </Button>
+                </Box>
+
+                {/* Lista de Derivações */}
+                <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    {derivacoes.map((derivacao, index) => renderDerivacao(derivacao, index))}
+                </Box>
+
+                {/* Botões de Ação */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={() => navigate('/estoque')}
+                        disabled={loading}
+                        sx={{ bgcolor: "#AEB8D6", color: '#142442', border: "none" }}
+                    >
+                        Voltar
                     </Button>
                     <Button
                         type="submit"
                         variant="contained"
-                        color="primary"
                         disabled={loading}
-                        sx={{
-                            bgcolor: "#AEB8D6",
-                            color: '#142442',
-                            minWidth: '120px'
-                        }}
+                        sx={{ bgcolor: "#AEB8D6", color: '#142442' }}
                     >
-                        {loading
-                            ? 'Salvando...'
-                            : isEditing ? "Atualizar" : "Cadastrar"
-                        }
+                        {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Salvar')}
                     </Button>
                 </Box>
             </form>
         </Paper>
     );
 
-    if (loading && isEditing) {
-        return (
-            <Box sx={{display: 'flex'}}>
-                <Sidenav/>
-                <Box component="main" sx={{flexGrow: 1, p: 3}}>
-                    <Typography variant="h4">Carregando...</Typography>
-                </Box>
-            </Box>
-        );
-    }
-
     return (
-        <>
-            <Box sx={{display: 'flex'}}>
-                <Sidenav/>
-                <Box component="main" sx={{flexGrow: 1, p: 3}}>
-                    <Typography variant="h4">
-                        {isEditing ? 'Editar Produto' : 'Cadastrar Produto'}
-                    </Typography>
-
-                    <Box sx={{marginTop: 3}}>
-                        {renderFormContent()}
-                    </Box>
-                </Box>
+        <Box sx={{ display: 'flex' }}>
+            <Sidenav />
+            <Box sx={{ flexGrow: 1, p: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    {isEditing ? 'Editar Produto' : 'Cadastrar Produto'}
+                </Typography>
+                {renderFormConteudo()}
+                <Snackbar
+                    open={openSnackbar}
+                    autoHideDuration={3000}
+                    onClose={() => setOpenSnackbar(false)}
+                >
+                    <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+                        {snackbarMessage}
+                    </Alert>
+                </Snackbar>
             </Box>
-
-            {/* Snackbar para mostrar as mensagens de sucesso ou erro */}
-            <Snackbar
-                open={openSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setOpenSnackbar(false)}
-            >
-                <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} sx={{width: '100%'}}>
-                    {snackbarMessage}
-                </Alert>
-            </Snackbar>
-        </>
+        </Box>
     );
 };
 
